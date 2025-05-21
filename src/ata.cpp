@@ -2,26 +2,8 @@
 #include <cuda_runtime_api.h>
 
 #include "ata.h"
-#include "strassen.cpp"
-
-
-cublasHandle_t handle;
-
-
-void GPU_T(Float *A, Float *C, int lda, int ldc,
-    int XA, int YA) {
-  Float one = 1.0;
-  Float zero = 0.0;
-  cublasGeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, XA, YA, &one, A, lda, &zero, C, ldc, C, ldc);
-}
-
-void GPU_AtB(Float *A, Float *B, Float *C,
-    int lda, int ldb, int ldc,
-    int XA, int XB, int XC,
-    int YA, int YB, int YC,
-    Float alpha, Float beta) {
-  cublasGemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, XB, YA, XA, &alpha, B, ldb, A, lda, &beta, C, ldc);
-}
+// #include "strassen.cpp"
+#include "rtxx.cpp"
 
 /*
   lda, ldc is the width in actual memory.
@@ -154,15 +136,17 @@ int main(int argc, char **argv) {
   int memSizeC = sizeC * sizeof(Float);
 
   Float *h_A = (Float *)malloc(memSizeA);
-  Float *h_C = (Float *)malloc(memSizeC);
-  Float *v_C = (Float *)malloc(memSizeC);
+  Float *ata_C = (Float *)malloc(memSizeC);
+  Float *classic_C = (Float *)malloc(memSizeC);
+  Float *rtxx_C = (Float *)malloc(memSizeC);
 
   for (int i = 0; i < sizeA; i++) {
     h_A[i] = (Float)rand() / RAND_MAX;
   }
   for (int i = 0; i < sizeC; i++) {
-    h_C[i] = 0.0;
-    v_C[i] = 0.0;
+    ata_C[i] = 0.0;
+    classic_C[i] = 0.0;
+    rtxx_C[i] = 0.0;
   }
 
   Float *d_A, *d_C;
@@ -177,6 +161,8 @@ int main(int argc, char **argv) {
   }
 
   CudaTimer ct;
+
+  // ATA algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
     ata(d_A, d_C, N, N, N, N, M, N, depth);
@@ -184,8 +170,19 @@ int main(int argc, char **argv) {
   ct.stop();
 
   float ataTime = ct.value() / iter;
-  cudaMemcpy(h_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+  cudaMemcpy(ata_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
 
+  // RTXX algorithm
+  ct.start();
+  for (int i = 0; i < iter; i++) {
+    rtxx(d_A, d_C, N, N, N, N, M, N, depth);
+  }
+  ct.stop();
+
+  float rtxxTime = ct.value() / iter;
+  cudaMemcpy(rtxx_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+
+  // Classic algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
     GPU_AtB(d_A, d_A, d_C, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
@@ -193,25 +190,69 @@ int main(int argc, char **argv) {
   ct.stop();
 
   float classicTime = ct.value() / iter;
-  cudaMemcpy(v_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+  cudaMemcpy(classic_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
 
-  float speedup = classicTime / ataTime;
-  printf ("M: %d; N: %d; AtA time: %.2f; classic time: %.2f; speedup: %.2f\n", M, N, ataTime, classicTime, speedup);
+  float ata_speedup = classicTime / ataTime;
+  float rtxx_speedup = classicTime / rtxxTime;
+  printf ("M: %d; N: %d; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
 
   if (check) {
-    Float absErr = 0.0;
+    Float ata_absErr = 0.0;
+    Float rtxx_absErr = 0.0;
     for (int i = 0; i < N; i++) {
       for (int j = 0; j <= i; j++) {
-        absErr += abs(h_C[i * N + j] - v_C[i * N + j]);
+        ata_absErr += abs(ata_C[i * N + j] - classic_C[i * N + j]);
+        rtxx_absErr += abs(rtxx_C[i * N + j] - classic_C[i * N + j]);
       }
     }
     int numel = N * (N + 1) / 2;
-    printf("CHECK: Mean absolute error: %g\n", absErr / numel);
+    printf("ATA: Mean absolute error: %g\n", ata_absErr / numel);
+    printf("RTXX: Mean absolute error: %g\n", rtxx_absErr / numel);
+  }
+
+  if (check) {
+    // Split matrices into 4x4 blocks and compute error for each block
+    int block_rows = N/4;
+    int block_cols = N/4;
+    
+    printf("\nBlock-wise absolute errors:\n");
+    printf("Format: (ATA error / RTXX error)\n\n");
+    
+    for (int bi = 0; bi < 4; bi++) {
+      for (int bj = 0; bj < 4; bj++) {
+        Float ata_block_err = 0.0;
+        Float rtxx_block_err = 0.0;
+        int block_elements = 0;
+        
+        // Compute error for current block
+        for (int i = bi * block_rows; i < (bi + 1) * block_rows; i++) {
+          for (int j = bj * block_cols; j < (bj + 1) * block_cols; j++) {
+            if (j <= i) { // Only lower triangular part
+              ata_block_err += abs(ata_C[i * N + j] - classic_C[i * N + j]);
+              rtxx_block_err += abs(rtxx_C[i * N + j] - classic_C[i * N + j]);
+              block_elements++;
+            }
+          }
+        }
+        
+        // Normalize by number of elements in block
+        if (block_elements > 0) {
+          ata_block_err /= block_elements;
+          rtxx_block_err /= block_elements;
+          printf("(%g / %g) ", ata_block_err, rtxx_block_err);
+        } else {
+          printf("(-- / --) ");
+        }
+      }
+      printf("\n");
+    }
+    printf("\n");
   }
 
   free(h_A);
-  free(h_C);
-  free(v_C);
+  free(ata_C);
+  free(rtxx_C);
+  free(classic_C);
   cudaFree(d_A);
   cudaFree(d_C);
 

@@ -119,39 +119,39 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
     // Create matrix views for input matrix A
     Matrix A_mat(A, XA, YA, lda);
-    Matrix X1 = A_mat.view(0, 0, XA4, YA4);
-    Matrix X2 = A_mat.view(XA4, 0, XA4, YA4);
-    Matrix X3 = A_mat.view(2*XA4, 0, XA4, YA4);
-    Matrix X4 = A_mat.view(3*XA4, 0, XA4, YA4);
-    Matrix X5 = A_mat.view(0, YA4, XA4, YA4);
-    Matrix X6 = A_mat.view(XA4, YA4, XA4, YA4);
-    Matrix X7 = A_mat.view(2*XA4, YA4, XA4, YA4);
-    Matrix X8 = A_mat.view(3*XA4, YA4, XA4, YA4);
-    Matrix X9 = A_mat.view(0, 2*YA4, XA4, YA4);
-    Matrix X10 = A_mat.view(XA4, 2*YA4, XA4, YA4);
-    Matrix X11 = A_mat.view(2*XA4, 2*YA4, XA4, YA4);
-    Matrix X12 = A_mat.view(3*XA4, 2*YA4, XA4, YA4);
-    Matrix X13 = A_mat.view(0, 3*YA4, XA4, YA4);
-    Matrix X14 = A_mat.view(XA4, 3*YA4, XA4, YA4);
-    Matrix X15 = A_mat.view(2*XA4, 3*YA4, XA4, YA4);
-    Matrix X16 = A_mat.view(3*XA4, 3*YA4, XA4, YA4);
+    Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
+    Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
+    Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
+    Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
+    Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
+    Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
+    Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
+    Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
+    Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
+    Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
+    Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
+    Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
+    Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
+    Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
+    Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+    Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
 
     // Create matrix views for output matrix C
     Matrix C_mat(C, XC, YC, ldc);
-    Matrix C11 = C_mat.view(0, 0, XC4, YC4);
-    Matrix C12 = C_mat.view(XC4, 0, XC4, YC4);
-    Matrix C13 = C_mat.view(2*XC4, 0, XC4, YC4);
-    Matrix C14 = C_mat.view(3*XC4, 0, XC4, YC4);
-    Matrix C21 = C_mat.view(0, YC4, XC4, YC4);
-    Matrix C22 = C_mat.view(XC4, YC4, XC4, YC4);
-    Matrix C23 = C_mat.view(2*XC4, YC4, XC4, YC4);
-    Matrix C24 = C_mat.view(3*XC4, YC4, XC4, YC4);
-    Matrix C31 = C_mat.view(0, 2*YC4, XC4, YC4);
-    Matrix C32 = C_mat.view(XC4, 2*YC4, XC4, YC4);
+    Matrix C11 = C_mat.view(    0,     0, XC4, YC4);
+    Matrix C12 = C_mat.view(  XC4,     0, XC4, YC4);
+    Matrix C13 = C_mat.view(2*XC4,     0, XC4, YC4);
+    Matrix C14 = C_mat.view(3*XC4,     0, XC4, YC4);
+    Matrix C21 = C_mat.view(    0,   YC4, XC4, YC4);
+    Matrix C22 = C_mat.view(  XC4,   YC4, XC4, YC4);
+    Matrix C23 = C_mat.view(2*XC4,   YC4, XC4, YC4);
+    Matrix C24 = C_mat.view(3*XC4,   YC4, XC4, YC4);
+    Matrix C31 = C_mat.view(    0, 2*YC4, XC4, YC4);
+    Matrix C32 = C_mat.view(  XC4, 2*YC4, XC4, YC4);
     Matrix C33 = C_mat.view(2*XC4, 2*YC4, XC4, YC4);
     Matrix C34 = C_mat.view(3*XC4, 2*YC4, XC4, YC4);
-    Matrix C41 = C_mat.view(0, 3*YC4, XC4, YC4);
-    Matrix C42 = C_mat.view(XC4, 3*YC4, XC4, YC4);
+    Matrix C41 = C_mat.view(    0, 3*YC4, XC4, YC4);
+    Matrix C42 = C_mat.view(  XC4, 3*YC4, XC4, YC4);
     Matrix C43 = C_mat.view(2*XC4, 3*YC4, XC4, YC4);
     Matrix C44 = C_mat.view(3*XC4, 3*YC4, XC4, YC4);
 
@@ -233,6 +233,12 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         int ldt = YA4;
         cudaMalloc((void **)&Xt, ldt * XA4 * sizeof(Float));
         Matrix Xt_mat(Xt, YA4, XA4, ldt);
+
+        // Memory layout of the matrices:
+        // | C11       | C12       | C13       | C14       |
+        // | C21       | C22       | C23       | C24       |
+        // | C31       | C32       | C33       | C34       |
+        // | C41       | C42       | C43       | C44       |
 
         // y2 = X12 - X10 -> C11
         GPU_sub(X12, X10, C11);

@@ -16,6 +16,9 @@ add_executable(ata-dp ${CMAKE_SOURCE_DIR}/src/ata.cpp)
 target_link_libraries(ata-dp ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
 target_compile_definitions(ata-dp PUBLIC -DFLOAT_AS_DOUBLE)
 
+add_executable(test-matrix-ops ${CMAKE_SOURCE_DIR}/src/test_matrix_ops.cpp)
+target_link_libraries(test-matrix-ops ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES})
+
 if(APPLE)
   set_property(TARGET ata-sp ata-dp PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
 endif(APPLE)

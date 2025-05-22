@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
-#include "strassen.cpp"
+#include "rtxx.cpp"
 
 // Helper function to print matrix
 void print_matrix(const char* name, Float* mat, int rows, int cols, int ld) {

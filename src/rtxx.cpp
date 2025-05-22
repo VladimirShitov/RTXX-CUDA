@@ -90,6 +90,20 @@ void GPU_AtB(const Matrix& A, const Matrix& B, Matrix& C, Float alpha = 1.0, Flo
             A.rows, B.rows, C.rows, A.cols, B.cols, C.cols, alpha, beta);
 }
 
+// Helper function to print 4x4 elements of a matrix
+void print_matrix_4x4(const char* name, const Matrix& mat) {
+    printf("\n%s (first 4x4 elements):\n", name);
+    Float* host_data = new Float[4 * 4];
+    cudaMemcpy(host_data, mat.data, 4 * 4 * sizeof(Float), cudaMemcpyDeviceToHost);
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            printf("%8.2f ", host_data[i * mat.ld + j]);
+        }
+        printf("\n");
+    }
+    delete[] host_data;
+}
+
 void rtxx(Float *A, Float *C, int lda, int ldc,
           int XA, int XC, int YA, int YC, int depth) {
     int XA4 = XA / 4;
@@ -119,21 +133,41 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
     // Create matrix views for input matrix A
     Matrix A_mat(A, XA, YA, lda);
+
+    // Normal version
+    // Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
+    // Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
+    // Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
+    // Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
+    // Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
+    // Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
+    // Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
+    // Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
+    // Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
+    // Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
+    // Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
+    // Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
+    // Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
+    // Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
+    // Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+    // Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
+
+    // Transposed version
     Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
-    Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
-    Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
-    Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
-    Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
+    Matrix X2 = A_mat.view(     0,    YA4, XA4, YA4);
+    Matrix X3 = A_mat.view(     0,  2*YA4, XA4, YA4);
+    Matrix X4 = A_mat.view(     0,  3*YA4, XA4, YA4);
+    Matrix X5 = A_mat.view(   XA4,     0, XA4, YA4);
     Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
-    Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
-    Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
-    Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
-    Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
+    Matrix X7 = A_mat.view(   XA4,  2*YA4, XA4, YA4);
+    Matrix X8 = A_mat.view(   XA4,  3*YA4, XA4, YA4);
+    Matrix X9 = A_mat.view( 2*XA4,      0, XA4, YA4);
+    Matrix X10 = A_mat.view(2*XA4,    YA4, XA4, YA4);
     Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
-    Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
-    Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
-    Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
-    Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+    Matrix X12 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+    Matrix X13 = A_mat.view(3*XA4,      0, XA4, YA4);
+    Matrix X14 = A_mat.view(3*XA4,    YA4, XA4, YA4);
+    Matrix X15 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
     Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
 
     // Create matrix views for output matrix C
@@ -234,6 +268,11 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         cudaMalloc((void **)&Xt, ldt * XA4 * sizeof(Float));
         Matrix Xt_mat(Xt, YA4, XA4, ldt);
 
+        // TODO: remove hotfix, now the matrix is transformed for some reason
+        // GPU_T(A_mat, A_mat);
+
+        print_matrix_4x4("Imput matrix:", A_mat);
+
         // Memory layout of the matrices:
         // | C11       | C12       | C13       | C14       |
         // | C21       | C22       | C23       | C24       |
@@ -247,13 +286,17 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |           |           |           |           |
         // |           |           |           |           |
 
+        print_matrix_4x4("y2", C11);
+
         // m17 = X12 * (-y2)^T -> C33
         GPU_ABt(X12, C11, C33, -1.0, 0.0);
-        // y2 is not needed anymore
         // |           |           |           |           |
         // |           |           |           |           |
         // |           |           | m17       |           |
         // |           |           |           |           |
+        // y2 is not needed anymore
+
+        print_matrix_4x4("m17", C11);
 
         // w5 = X16 + y2 -> C23
         GPU_add(X16, C11, C23);
@@ -262,6 +305,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |           |           | m17       |           |
         // |           |           |           |           |
 
+        print_matrix_4x4("w5", C11);
+
         // m3 = (-X2 + X12) * w5^T -> C24
         GPU_sub(X12, X2, W1_mat);
         GPU_ABt(W1_mat, C23, C24, 1.0, 0.0);
@@ -269,6 +314,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |           |           | w5        | m3        |
         // |           |           | m17       |           |
         // |           |           |           |           |
+
+        print_matrix_4x4("m3", C11);
 
         // m24 = (-X1 + X4 + X12) * X16^T -> C13
         GPU_sub(X4, X1, W1_mat);
@@ -279,107 +326,135 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |           |           | m17       |           |
         // |           |           |           |           |
 
-        // z3 = m3 + m17 + m24 -> C13
-        GPU_add(C24, C13, C13);
-        GPU_add(C33, C13, C13);
-        // |           |           | z3        |           |
-        // |           |           | w5        | m3        |
-        // |           |           | m17       |           |
-        // |           |           |           |           |
+        print_matrix_4x4("m24", C11);
+
+        // z3 = m3 + m17 - m24 -> C13
+        GPU_sub(C33, C13, C13);  // m17 - m24
+        GPU_add(C13, C24, C13); 
+        // |           |           | z3          |           |
+        // |           |           | w5          | m3        |
+        // |           |           | m17         |           |
+        // |           |           |             |           |
+
+        print_matrix_4x4("z3", C11);
         
         // w3 = X6 + X7 -> C11
         // w4 = X14 + X15 -> C42
         GPU_add(X6, X7, C11);
         GPU_add(X14, X15, C42);
-        // | w3        |           | z3        |           |
-        // |           |           | w5        | m3        |
-        // |           |           | m17       |           |
-        // |           | w4        |           |           |
+        // | w3        |           | z3          |           |
+        // |           |           | w5          | m3        |
+        // |           |           | m17         |           |
+        // |           | w4        |             |           |
+
+        print_matrix_4x4("w3, w4", C11);
         
         // m8 = X2 * (w3 - w4 + w5)^T -> C34
         GPU_sub(C11, C42, W1_mat);
         GPU_add(W1_mat, C23, W1_mat);
         GPU_ABt(X2, W1_mat, C34, 1.0, 0.0);
-        // | w3        |           | z3        |           |
-        // |           |           | w5        | m3        |
-        // |           |           | m17       | m8        |
-        // |           | w4        |           |           |
+        // | w3        |           | z3          |           |
+        // |           |           | w5          | m3        |
+        // |           |           | m17         | m8        |
+        // |           | w4        |             |           |
+
+        print_matrix_4x4("m8", C11);
 
         // m5 = (X2 + X11) * (X15 - w3)^T -> C12
         GPU_add(X2, X11, W1_mat);
         GPU_sub(X15, C11, W2_mat);
         GPU_ABt(W1_mat, W2_mat, C12, 1.0, 0.0);
-        // | w3        | m5        | z3        |           |
-        // |           |           | w5        | m3        |
-        // |           |           | m17       | m8        |
-        // |           | w4        |           |           |
+        // | w3        | m5        | z3          |           |
+        // |           |           | w5          | m3        |
+        // |           |           | m17         | m8        |
+        // |           | w4        |             |           |
+
+        print_matrix_4x4("m5", C11);
 
         // m7 = X11 * w3^T -> C21
         GPU_ABt(X11, C11, C21, 1.0, 0.0);
-        // | w3        | m5        | z3        |           |
-        // | m7        |           | w5        | m3        |
-        // |           |           | m17       | m8        |
-        // |           | w4        |           |           |
+        // | w3        | m5        | z3          |           |
+        // | m7        |           | w5          | m3        |
+        // |           |           | m17         | m8        |
+        // |           | w4        |             |           |
+
+        print_matrix_4x4("m7", C11);
 
         // z5 = m5 + m7 + m8 -> C34
         GPU_add(C12, C34, C34);
         GPU_add(C21, C34, C34);
-        // | w3        | m5        | z3        |           |
-        // | m7        |           | w5        | m3        |
-        // |           |           | m17       | z5        |
-        // |           | w4        |           |           |
+        // | w3        | m5        | z3          |           |
+        // | m7        |           | w5          | m3        |
+        // |           |           | m17         |           |
+        // |           | w4        |             |           |
+
+        print_matrix_4x4("z5", C11);
 
         // m23 = X1 * (X13 - X5 + X16)^T -> C41
         GPU_sub(X13, X5, W1_mat);
         GPU_add(W1_mat, X16, W1_mat);
         GPU_ABt(X1, W1_mat, C41, 1.0, 0.0);
-        // | w3        | m5        | z3        |           |
-        // | m7        |           | w5        | m3        |
-        // |           |           | m17       | z5        |
-        // | m23       | w4        |           |           |
+        // | w3        | m5        | z3          |           |
+        // | m7        |           | w5          | m3        |
+        // |           |           | m17         | z5        |
+        // | m23        | w4       |             |           |
+
+        print_matrix_4x4("m23", C11);
 
         // w10 = X6 - X7 -> C22  // TODO: better to put somewhere else, requires additional operation
         GPU_sub(X6, X7, C22);
-        // | w3        | m5        | z3        |           |
-        // | m7        | w10       | w5        | m3        |
-        // |           |           | m17       | z5        |
-        // | m23       | w4        |           |           |
+        // | w3        | m5        | z3          |           |
+        // | m7        | w10       | w5          | m3        |
+        // |           |           | m17         | z5        |
+        // | m23        | w4        |             |           |
+
+        print_matrix_4x4("w10", C11);
 
         // m11 = (X5 + w10) * X5^T -> C32
         GPU_add(X5, C22, W1_mat);
         GPU_ABt(W1_mat, X5, C32, 1.0, 0.0);
-        // | w3        | m5        | z3        |           |
-        // | m7        | w10       | w5        | m3        |
-        // |           | m11       | m17       | z5        |
-        // | m23       | w4        |           |           |
-        
+        // | w3        | m5        | z3          |           |
+        // | m7        | w10       | w5          | m3        |
+        // |           | m11       | m17         | z5        |
+        // | m23        | w4        |             |           |
+
+        print_matrix_4x4("m11", C11);
+
         // w2 = X1 - X5 - X6 -> C31
         GPU_sub(X1, X5, W1_mat);
-        GPU_sub(W1_mat, X6, W1_mat);
-        // | w3        | m5        | z3        |           |
-        // | m7        | w10       | w5        | m3        |
-        // | w2        | m11       | m17       | z5        |
-        // | m23       | w4        |           |           |
+        GPU_sub(W1_mat, X6, C31);
+        // | w3        | m5        | z3          |           |
+        // | m7        | w10       | w5          | m3        |
+        // | w2        | m11       | m17         | z5        |
+        // | m23        | w4        |             |           |
+
+        print_matrix_4x4("w2", C11);
 
         // m2 = (w2 + X7) * (X15 + X5)^T -> C43
         GPU_add(C31, X7, W1_mat);
         GPU_add(X15, X5, W2_mat);
         GPU_ABt(W1_mat, W2_mat, C43, 1.0, 0.0);
-        // | w3        | m5        | z3        |           |
-        // | m7        | w10       | w5        | m3        |
-        // | w2        | m11       | m17       | z5        |
-        // | m23       | w4        | m2        |           |
+        // | w3        | m5        | z3          |           |
+        // | m7        | w10       | w5          | m3        |
+        // | w2        | m11       | m17         | z5        |
+        // | m23        | w4        | m2          |           |
 
-        // z4 = m2 + m11 + m23 -> C14
-        GPU_add(C43, C14, C14);
-        GPU_add(C33, C14, C14);
+        print_matrix_4x4("m2", C11);
+
+        // z4 = m2 + m11 + m23 -> C41
+        GPU_add(C43, C41, C41);
+        GPU_add(C32, C41, C41);
         // | w3        | m5        | z3        |           |
         // | m7        | w10       | w5        | m3        |
         // | w2        | m11       | m17       | z5        |
-        // | z4        | w4        | m2        |           |
+        // | z4        | w4        |           |           |
+
+        print_matrix_4x4("z4", C11);
 
         // m2 -> C12
         GPU_sub(C43, C12, C12);
+
+        print_matrix_4x4("m2", C11);
 
         // w9 = X7 - X11 -> C43
         GPU_sub(X7, X11, C43);
@@ -388,8 +463,10 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | w2        | m11       | m17       | z5        |
         // | z4        | w4        | w9        |           |
 
+        print_matrix_4x4("w9", C11);
+
         // m13 = (-w2 + X3 - w9) * X15^T -> C44
-        GPU_sub(X3, W2_mat, W1_mat);
+        GPU_sub(X3, C31, W1_mat);
         GPU_sub(W1_mat, C43, W1_mat);
         GPU_ABt(W1_mat, X15, C44, 1.0, 0.0);
         // | w3        | m2 - m5   | z3        |           |
@@ -397,13 +474,18 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | w2        | m11       | m17       | z5        |
         // | z4        | w4        | w9        | m13       |
 
-        // C14 = z3 + z4 + z5 -> C14
-        GPU_add(C13, C41, C14);
-        GPU_add(C34, C41, C14);
+        print_matrix_4x4("m13", C11);
+
+        // C14 = z4 - z3 - z5 + m13 -> C14
+        GPU_sub(C41, C13, C14);
+        GPU_sub(C14, C34, C14);
+        GPU_add(C14, C44, C14);
         // | w3        | m2 - m5   | z3        | --------- |
         // | m7        | w10       | w5        | m3        |
         // | w2        | m11       | m17       | z5        |
         // | z4        | w4        | w9        | m13       |
+
+        print_matrix_4x4("C14", C11);
 
         // m13 -> C12
         GPU_add(C12, C44, C12);
@@ -439,7 +521,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | z4        | w4        | w9        | m12       |
 
         // z1 = m7 - m11 - m12 -> C32
-        GPU_sub(C12, C32, C32);
+        GPU_sub(C21, C32, C32);
         GPU_sub(C32, C44, C32);
         // | w3        | C12 + z1  | z3        | --------- |
         // | m7        | w10       | w5        | m3        |
@@ -480,16 +562,6 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | w2        | z1        | z8        | z5        |
         // | z4        | w4        | m18       | m12       |
 
-
-        // move C12 to C21
-        GPU_add(C12, C21, C21, 1.0, 0.0);
-        GPU_add(C14, C41, C41, 1.0, 0.0);
-        
-        
-        
-        
-        
-        
         // // C11
         // rtxx(X1.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
         // rtxx(X2.data, W_2, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);

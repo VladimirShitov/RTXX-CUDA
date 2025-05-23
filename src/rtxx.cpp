@@ -833,7 +833,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | z2+z7+m10 |           |
         // | w2        |           | z8 + z7   | --------- |
         // | z4        | w4        | m18       |           |
-        // w7 is not needed anymore
+        // [  ] [ w7 ]
 
         print_matrix_4x4("m4", C11);
 
@@ -844,6 +844,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | z2+z7+m10 | z6        |
         // | w2        |           | z8 + z7   | --------- |
         // | z4        | w4        |           |           |
+        // [  ] [ w7 ]
         // m20 is not needed anymore
         // m18 is not needed anymore
 
@@ -855,6 +856,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | --------- | z6        |
         // | w2        |           | z8 + z7   | --------- |
         // | z4        | w4        |           |           |
+        // [  ] [ w7 ]
 
         print_matrix_4x4("C23", C11);
 
@@ -866,6 +868,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | --------- | z6        |
         // | w2        |           | z8 + z7   | --------- |
         // | z4        | w4        |           |           |
+        // [  ] [ w7 ]
 
         print_matrix_4x4("m26", C11);
 
@@ -877,17 +880,19 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | --------- | z6        |
         // | w2        |           | --------- | --------- |
         // | z4        | w4        |           |           |
+        // [  ] [ w7 ]
 
         print_matrix_4x4("C33", C11);
 
         // m16 = (X1 - X8) * (X9 - X16)^T -> C11
         GPU_sub(X1, X8, W1_mat);
-        GPU_sub(X9, X16, W2_mat);
-        GPU_ABt(W1_mat, W2_mat, C11, 1.0, 0.0);
+        GPU_sub(X9, X16, C32);
+        GPU_ABt(W1_mat, C32, C11, 1.0, 0.0);
         // | m16       | --------- | z3+m15+z2 | --------- |
         // | m4        | --------- | --------- | z6        |
         // | w2        |           | --------- | --------- |
         // | z4        | w4        |           |           |
+        // [  ] [ w7 ]
 
         print_matrix_4x4("m16", C11);
 
@@ -897,8 +902,30 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m4        | --------- | --------- | z6        |
         // | w2        |           | --------- | --------- |
         // | z4        | w4        |           |           |
-
+        // [  ] [ w7 ]
         print_matrix_4x4("C13", C11);
+
+        // m14 = (-w2) * (w7 + w4) -> C21
+        GPU_add(C42, W2_mat, C43);
+        GPU_ABt(C31, C43, C21, -1.0, 0.0);
+        // | m16       | --------- | --------- | --------- |
+        // | m14       | --------- | --------- | z6        |
+        // | w2        |           | --------- | --------- |
+        // | z4        | w4        |           |           |
+        // w7 is not needed anymore
+
+        print_matrix_4x4("m14", C11);
+
+        // C24 = z4 + z6 + m14 + m16
+        GPU_add(C24, C11, C24);
+        GPU_add(C24, C21, C24);
+        GPU_add(C24, C41, C24);
+        // | m16       | --------- | --------- | --------- |
+        // | m14       | --------- | --------- | --------- |
+        // | w2        |           | --------- | --------- |
+        // | z4        | w4        |           |           |
+
+        print_matrix_4x4("C24", C11);
         
 
 

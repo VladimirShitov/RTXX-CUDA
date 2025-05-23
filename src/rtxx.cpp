@@ -927,26 +927,28 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         print_matrix_4x4("C24", C11);
         
+        // Recursively calculate C11
+        rtxx(X1.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        rtxx(X2.data, C31, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
 
+        GPU_add(C21, C31, C11);
 
-        // // C11
-        // rtxx(X1.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // rtxx(X2.data, W_2, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(W1_mat, W2_mat, C11);
-        // rtxx(X3.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(C11, W1_mat, C11);
-        // rtxx(X4.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(C11, W1_mat, C11);
+        rtxx(X3.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        GPU_add(C21, C11, C11);
 
-        // // C44
-        // rtxx(X13.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // rtxx(X14.data, W_2, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(W1_mat, W2_mat, C44);
-        // rtxx(X15.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(C44, W1_mat, C44);
-        // rtxx(X16.data, W_1, lda, ldw, XA4, XC4, YA4, YC4, depth - 1);
-        // GPU_add(C44, W1_mat, C44);
+        rtxx(X4.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        GPU_add(C21, C11, C11);
 
+        // Recursively calculate C44
+        rtxx(X13.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        rtxx(X14.data, C31, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        GPU_add(C21, C31, C44);
+
+        rtxx(X15.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        GPU_add(C21, C44, C44);
+
+        rtxx(X16.data, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        GPU_add(C21, C44, C44);
 
         cudaFree(Xt);
     }

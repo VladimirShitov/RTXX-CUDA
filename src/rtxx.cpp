@@ -172,22 +172,40 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
     // Create matrix views for output matrix C
     Matrix C_mat(C, XC, YC, ldc);
-    Matrix C11 = C_mat.view(    0,     0, XC4, YC4);
-    Matrix C12 = C_mat.view(  XC4,     0, XC4, YC4);
-    Matrix C13 = C_mat.view(2*XC4,     0, XC4, YC4);
-    Matrix C14 = C_mat.view(3*XC4,     0, XC4, YC4);
-    Matrix C21 = C_mat.view(    0,   YC4, XC4, YC4);
-    Matrix C22 = C_mat.view(  XC4,   YC4, XC4, YC4);
-    Matrix C23 = C_mat.view(2*XC4,   YC4, XC4, YC4);
-    Matrix C24 = C_mat.view(3*XC4,   YC4, XC4, YC4);
-    Matrix C31 = C_mat.view(    0, 2*YC4, XC4, YC4);
-    Matrix C32 = C_mat.view(  XC4, 2*YC4, XC4, YC4);
-    Matrix C33 = C_mat.view(2*XC4, 2*YC4, XC4, YC4);
-    Matrix C34 = C_mat.view(3*XC4, 2*YC4, XC4, YC4);
-    Matrix C41 = C_mat.view(    0, 3*YC4, XC4, YC4);
-    Matrix C42 = C_mat.view(  XC4, 3*YC4, XC4, YC4);
-    Matrix C43 = C_mat.view(2*XC4, 3*YC4, XC4, YC4);
-    Matrix C44 = C_mat.view(3*XC4, 3*YC4, XC4, YC4);
+    // Matrix C11 = C_mat.view(    0,     0, XC4, YC4);
+    // Matrix C12 = C_mat.view(  XC4,     0, XC4, YC4);
+    // Matrix C13 = C_mat.view(2*XC4,     0, XC4, YC4);
+    // Matrix C14 = C_mat.view(3*XC4,     0, XC4, YC4);
+    // Matrix C21 = C_mat.view(    0,   YC4, XC4, YC4);
+    // Matrix C22 = C_mat.view(  XC4,   YC4, XC4, YC4);
+    // Matrix C23 = C_mat.view(2*XC4,   YC4, XC4, YC4);
+    // Matrix C24 = C_mat.view(3*XC4,   YC4, XC4, YC4);
+    // Matrix C31 = C_mat.view(    0, 2*YC4, XC4, YC4);
+    // Matrix C32 = C_mat.view(  XC4, 2*YC4, XC4, YC4);
+    // Matrix C33 = C_mat.view(2*XC4, 2*YC4, XC4, YC4);
+    // Matrix C34 = C_mat.view(3*XC4, 2*YC4, XC4, YC4);
+    // Matrix C41 = C_mat.view(    0, 3*YC4, XC4, YC4);
+    // Matrix C42 = C_mat.view(  XC4, 3*YC4, XC4, YC4);
+    // Matrix C43 = C_mat.view(2*XC4, 3*YC4, XC4, YC4);
+    // Matrix C44 = C_mat.view(3*XC4, 3*YC4, XC4, YC4);
+
+    // Transposed version
+    Matrix C11 = C_mat.view(    0,     0    , XC4, YC4);
+    Matrix C12 = C_mat.view(    0,     YA4  , XC4, YC4);
+    Matrix C13 = C_mat.view(    0,     2*YA4, XC4, YC4);
+    Matrix C14 = C_mat.view(    0,     3*YA4, XC4, YC4);
+    Matrix C21 = C_mat.view(  XC4,     0    , XC4, YC4);
+    Matrix C22 = C_mat.view(  XC4,     YA4  , XC4, YC4);
+    Matrix C23 = C_mat.view  (XC4,     2*YA4, XC4, YC4);
+    Matrix C24 = C_mat.view  (XC4,     3*YA4, XC4, YC4);
+    Matrix C31 = C_mat.view(2*XC4,     0    , XC4, YC4);
+    Matrix C32 = C_mat.view(2*XC4,     YA4  , XC4, YC4);
+    Matrix C33 = C_mat.view(2*XC4,     2*YA4, XC4, YC4);
+    Matrix C34 = C_mat.view(2*XC4,     3*YA4, XC4, YC4);
+    Matrix C41 = C_mat.view(3*XC4,     0    , XC4, YC4);
+    Matrix C42 = C_mat.view(3*XC4,     YA4  , XC4, YC4);
+    Matrix C43 = C_mat.view(3*XC4,     2*YA4, XC4, YC4);
+    Matrix C44 = C_mat.view(3*XC4,     3*YA4, XC4, YC4);    
 
     // Debug prints for matrix views
     printf("\nInput matrix A views:\n");

@@ -111,105 +111,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
     int YA4 = YA / 4;
     int YC4 = YC / 4;
 
-    Float *W_1, *W_2;
-    int ldw = XC4;
-    int ldm = XC4;
-
-    // Allocate memory with proper error checking
-    cudaError_t err;
-    err = cudaMalloc((void **)&W_1, ldw * YC4 * sizeof(Float));
-    if (err != cudaSuccess) { 
-        printf("Failed to allocate W_1: %s\n", cudaGetErrorString(err));
-        printf("Attempted to allocate %lu bytes\n", (size_t)ldw * YC4 * sizeof(Float));
-        return; 
-    }
-    err = cudaMalloc((void **)&W_2, ldw * YC4 * sizeof(Float));
-    if (err != cudaSuccess) { printf("Failed to allocate W_2: %s\n", cudaGetErrorString(err)); return; }
-
-    int dXA = XA4;
-    int dYA = YA4 * lda;
-    int dXC = XC4;
-    int dYC = YC4 * ldc;
-
     // Create matrix views for input matrix A
     Matrix A_mat(A, XA, YA, lda);
-
-    // Normal version
-    // Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
-    // Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
-    // Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
-    // Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
-    // Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
-    // Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
-    // Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
-    // Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
-    // Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
-    // Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
-    // Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
-    // Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
-    // Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
-    // Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
-    // Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
-    // Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
-
-    // Transposed version
-    Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
-    Matrix X2 = A_mat.view(     0,    YA4, XA4, YA4);
-    Matrix X3 = A_mat.view(     0,  2*YA4, XA4, YA4);
-    Matrix X4 = A_mat.view(     0,  3*YA4, XA4, YA4);
-    Matrix X5 = A_mat.view(   XA4,     0, XA4, YA4);
-    Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
-    Matrix X7 = A_mat.view(   XA4,  2*YA4, XA4, YA4);
-    Matrix X8 = A_mat.view(   XA4,  3*YA4, XA4, YA4);
-    Matrix X9 = A_mat.view( 2*XA4,      0, XA4, YA4);
-    Matrix X10 = A_mat.view(2*XA4,    YA4, XA4, YA4);
-    Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
-    Matrix X12 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
-    Matrix X13 = A_mat.view(3*XA4,      0, XA4, YA4);
-    Matrix X14 = A_mat.view(3*XA4,    YA4, XA4, YA4);
-    Matrix X15 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
-    Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
-
-    // Create matrix views for output matrix C
-    Matrix C_mat(C, XC, YC, ldc);
-    // Matrix C11 = C_mat.view(    0,     0, XC4, YC4);
-    // Matrix C12 = C_mat.view(  XC4,     0, XC4, YC4);
-    // Matrix C13 = C_mat.view(2*XC4,     0, XC4, YC4);
-    // Matrix C14 = C_mat.view(3*XC4,     0, XC4, YC4);
-    // Matrix C21 = C_mat.view(    0,   YC4, XC4, YC4);
-    // Matrix C22 = C_mat.view(  XC4,   YC4, XC4, YC4);
-    // Matrix C23 = C_mat.view(2*XC4,   YC4, XC4, YC4);
-    // Matrix C24 = C_mat.view(3*XC4,   YC4, XC4, YC4);
-    // Matrix C31 = C_mat.view(    0, 2*YC4, XC4, YC4);
-    // Matrix C32 = C_mat.view(  XC4, 2*YC4, XC4, YC4);
-    // Matrix C33 = C_mat.view(2*XC4, 2*YC4, XC4, YC4);
-    // Matrix C34 = C_mat.view(3*XC4, 2*YC4, XC4, YC4);
-    // Matrix C41 = C_mat.view(    0, 3*YC4, XC4, YC4);
-    // Matrix C42 = C_mat.view(  XC4, 3*YC4, XC4, YC4);
-    // Matrix C43 = C_mat.view(2*XC4, 3*YC4, XC4, YC4);
-    // Matrix C44 = C_mat.view(3*XC4, 3*YC4, XC4, YC4);
-
-    // Transposed version
-    Matrix C11 = C_mat.view(    0,     0    , XC4, YC4);
-    Matrix C12 = C_mat.view(    0,     YA4  , XC4, YC4);
-    Matrix C13 = C_mat.view(    0,     2*YA4, XC4, YC4);
-    Matrix C14 = C_mat.view(    0,     3*YA4, XC4, YC4);
-    Matrix C21 = C_mat.view(  XC4,     0    , XC4, YC4);
-    Matrix C22 = C_mat.view(  XC4,     YA4  , XC4, YC4);
-    Matrix C23 = C_mat.view  (XC4,     2*YA4, XC4, YC4);
-    Matrix C24 = C_mat.view  (XC4,     3*YA4, XC4, YC4);
-    Matrix C31 = C_mat.view(2*XC4,     0    , XC4, YC4);
-    Matrix C32 = C_mat.view(2*XC4,     YA4  , XC4, YC4);
-    Matrix C33 = C_mat.view(2*XC4,     2*YA4, XC4, YC4);
-    Matrix C34 = C_mat.view(2*XC4,     3*YA4, XC4, YC4);
-    Matrix C41 = C_mat.view(3*XC4,     0    , XC4, YC4);
-    Matrix C42 = C_mat.view(3*XC4,     YA4  , XC4, YC4);
-    Matrix C43 = C_mat.view(3*XC4,     2*YA4, XC4, YC4);
-    Matrix C44 = C_mat.view(3*XC4,     3*YA4, XC4, YC4);    
-
-    // Create matrix views for temporary matrices
-    Matrix W1_mat(W_1, XC4, YC4, ldw);
-    Matrix W2_mat(W_2, XC4, YC4, ldw);
 
     /* cutoff criteria */
     float mm = (float)CUTOFF / XA4;
@@ -244,7 +147,80 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // }
     }
     else {
-        // Apply RTXX with recursive calls for corner matrices
+        // Normal version
+        // Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
+        // Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
+        // Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
+        // Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
+        // Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
+        // Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
+        // Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
+        // Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
+        // Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
+        // Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
+        // Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
+        // Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
+        // Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
+        // Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
+        // Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+        // Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
+
+        // Transposed version
+        Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
+        Matrix X2 = A_mat.view(     0,    YA4, XA4, YA4);
+        Matrix X3 = A_mat.view(     0,  2*YA4, XA4, YA4);
+        Matrix X4 = A_mat.view(     0,  3*YA4, XA4, YA4);
+        Matrix X5 = A_mat.view(   XA4,     0, XA4, YA4);
+        Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
+        Matrix X7 = A_mat.view(   XA4,  2*YA4, XA4, YA4);
+        Matrix X8 = A_mat.view(   XA4,  3*YA4, XA4, YA4);
+        Matrix X9 = A_mat.view( 2*XA4,      0, XA4, YA4);
+        Matrix X10 = A_mat.view(2*XA4,    YA4, XA4, YA4);
+        Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
+        Matrix X12 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
+        Matrix X13 = A_mat.view(3*XA4,      0, XA4, YA4);
+        Matrix X14 = A_mat.view(3*XA4,    YA4, XA4, YA4);
+        Matrix X15 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
+        Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
+
+        // Create matrix views for output matrix C
+        Matrix C_mat(C, XC, YC, ldc);
+        // Matrix C11 = C_mat.view(    0,     0, XC4, YC4);
+        // Matrix C12 = C_mat.view(  XC4,     0, XC4, YC4);
+        // Matrix C13 = C_mat.view(2*XC4,     0, XC4, YC4);
+        // Matrix C14 = C_mat.view(3*XC4,     0, XC4, YC4);
+        // Matrix C21 = C_mat.view(    0,   YC4, XC4, YC4);
+        // Matrix C22 = C_mat.view(  XC4,   YC4, XC4, YC4);
+        // Matrix C23 = C_mat.view(2*XC4,   YC4, XC4, YC4);
+        // Matrix C24 = C_mat.view(3*XC4,   YC4, XC4, YC4);
+        // Matrix C31 = C_mat.view(    0, 2*YC4, XC4, YC4);
+        // Matrix C32 = C_mat.view(  XC4, 2*YC4, XC4, YC4);
+        // Matrix C33 = C_mat.view(2*XC4, 2*YC4, XC4, YC4);
+        // Matrix C34 = C_mat.view(3*XC4, 2*YC4, XC4, YC4);
+        // Matrix C41 = C_mat.view(    0, 3*YC4, XC4, YC4);
+        // Matrix C42 = C_mat.view(  XC4, 3*YC4, XC4, YC4);
+        // Matrix C43 = C_mat.view(2*XC4, 3*YC4, XC4, YC4);
+        // Matrix C44 = C_mat.view(3*XC4, 3*YC4, XC4, YC4);
+
+        // Transposed version
+        Matrix C11 = C_mat.view(    0,     0    , XC4, YC4);
+        Matrix C12 = C_mat.view(    0,     YA4  , XC4, YC4);
+        Matrix C13 = C_mat.view(    0,     2*YA4, XC4, YC4);
+        Matrix C14 = C_mat.view(    0,     3*YA4, XC4, YC4);
+        Matrix C21 = C_mat.view(  XC4,     0    , XC4, YC4);
+        Matrix C22 = C_mat.view(  XC4,     YA4  , XC4, YC4);
+        Matrix C23 = C_mat.view  (XC4,     2*YA4, XC4, YC4);
+        Matrix C24 = C_mat.view  (XC4,     3*YA4, XC4, YC4);
+        Matrix C31 = C_mat.view(2*XC4,     0    , XC4, YC4);
+        Matrix C32 = C_mat.view(2*XC4,     YA4  , XC4, YC4);
+        Matrix C33 = C_mat.view(2*XC4,     2*YA4, XC4, YC4);
+        Matrix C34 = C_mat.view(2*XC4,     3*YA4, XC4, YC4);
+        Matrix C41 = C_mat.view(3*XC4,     0    , XC4, YC4);
+        Matrix C42 = C_mat.view(3*XC4,     YA4  , XC4, YC4);
+        Matrix C43 = C_mat.view(3*XC4,     2*YA4, XC4, YC4);
+        Matrix C44 = C_mat.view(3*XC4,     3*YA4, XC4, YC4);
+
+        // We need to store transposed matrix for Strassen calls
         Float *Xt;
         int ldt = YA4;
         cudaMalloc((void **)&Xt, ldt * XA4 * sizeof(Float));

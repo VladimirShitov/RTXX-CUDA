@@ -41,6 +41,7 @@ For example:
 ## How to setup cutoff?
 Set `CUTOFF` in [src/ata.h](src/ata.h)
 
+# Reference
 Original publication:
 ```
 @misc{rybin2025xxtfaster,

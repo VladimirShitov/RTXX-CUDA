@@ -632,6 +632,188 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         print_matrix_4x4("C14", C11);
 
+        // z5 +> m3 to build C34 later
+        GPU_add(C43, C13, C42);
+        // |                  | z4               | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5            |
+        // |                  | z3               | w7               | w3               |
+        // | ---------------- | m14              | m17              |                  |
+        // z5 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("z5 to m3", C11);
+
+        // Note: losing an operation here
+        // m18 = X9 @ y1.T = X @ (X13 - X14).T -> C13
+        GPU_sub(X13, X14, C11);
+        GPU_ABt(X9, C11, C13);
+        // |                  | z4               | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5            |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14              | m17              |                  |
+
+        print_matrix_4x4("m18", C11);
+
+        // z8 = m17 + m18 -> C34
+        GPU_add(C34, C13, C34);
+        // |                  | z4               | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5            |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14              | z8               |                  |
+
+        print_matrix_4x4("z8", C11);
+
+        // z8 +> C42, almost C34, just m25 is needed
+        GPU_add(C42, C34, C42);
+        // |                  | z4               | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14              | z8               |                  |
+
+        print_matrix_4x4("z8 to C42", C11);
+
+        // z4 +> C24 to calculate C24 later
+        GPU_add(C24, C14, C24);
+        // |                  |                  | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // z4 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("z4 to C24", C11);
+
+        // w6 = X10 + X11 -> C44
+        GPU_add(X10, X11, C44);
+        // |                  |                  | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14+z4           | z8               | w6               |
+
+        print_matrix_4x4("w6", C11);
+
+        // m9 = X6 @ (w7 - w6 + w3).T -> C21
+        GPU_sub(C33, C44, C11);  // w7 - w6
+        GPU_add(C11, C43, C11);  // + w3
+        GPU_ABt(X6, C11, C21);
+        // |                  | m9               | m7               | w5               |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14+z4           | z8               | w6               |
+
+        print_matrix_4x4("m9", C11);
+
+        // m9 +> m7 to calculate z7 later; Also +> w6 to w5
+        GPU_add(C31, C21, C31);
+        GPU_add(C44, C41, C41);
+        // |                  | m9               | m7+m9            | w5+w6            |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w3               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // m9, w6 are not needed anymore and can be rewritten
+
+        print_matrix_4x4("m9 to m7", C11);
+
+        // m6 = (X6 + X11) @ (w3 - X11).T -> C21
+        GPU_add(X6, X11, C11);
+        GPU_sub(C43, X11, C44);
+        GPU_ABt(C11, C44, C21);
+        // |                  | m6               | m7+m9            | w5+w6            |
+        // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               |                  |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // w3 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("m6", C11);
+
+        // m6 +> C22
+        GPU_add(C22, C21, C22);
+        // |                  | m6               | m7+m9            | w5+w6            |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               |                  |
+        // | ---------------- | m14+z4           | z8               |                  |
+
+        print_matrix_4x4("m6 to C22", C11);
+
+        // w1 = X2 + X4 - X8 -> C43
+        GPU_add(X2, X4, C43);
+        GPU_sub(C43, X8, C43);
+        // |                  | m6               | m7+m9            | w5+w6            |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+
+        print_matrix_4x4("w1", C11);
+
+        // z7 = m6 - (m7+m9)
+        GPU_sub(C21, C31, C31);
+        // |                  |                  | z7               | w5+w6            |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // m6 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("z7", C11);
+
+        // m15 = w1 @ (w6 + w5).T -> C21
+        GPU_ABt(C43, C41, C21);
+        // |                  | m15              | z7               |                  |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3               | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // w5+w6 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("m15", C11);
+
+        // m15 +> C23 to calculate C13 later
+        GPU_add(C23, C21, C23);
+        // |                  |                  | z7               |                  |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3+m15           | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        // m15 is not needed anymore and can be rewritten
+
+        print_matrix_4x4("m15 to C23", C11);
+
+        // m10 = (w1 - X3 + X7 + X11) @ X11.T -> C41
+        GPU_sub(C43, X3, C11);
+        GPU_add(C11, X7, C11);
+        GPU_add(C11, X11, C11);
+        GPU_ABt(C11, X11, C41);
+        // |                  |                  | z7               | m10              |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3+m15           | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+
+        print_matrix_4x4("m10", C11);
+
+        // m1 = (-w1 + X3) @ (X8 + X11).T -> C21
+        GPU_sub(X3, C43, C11);
+        GPU_add(X8, X11, C44);
+        GPU_ABt(C11, C44, C21); 
+        // |                  | m1               | z7               | m10              |
+        // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
+        // | m18              | z3+m15           | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+        
+        // C22 = m6+m22-z1 + m1 + m10
+        GPU_add(C22, C21, C22);
+        GPU_add(C22, C41, C22);
+        // |                  | m1               | z7               | m10              |
+        // | ---------------- | ---------------- | m12              | m3+z5+z8         |
+        // | m18              | z3+m15           | w7               | w1               |
+        // | ---------------- | m14+z4           | z8               |                  |
+
+        print_matrix_4x4("C22", C11);
+        
+
+
+
+
+
+
+
+
+
+
         // Recursively calculate C11
         // rtxx(X1.data, C21.data, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
         // rtxx(X2.data, C31.data, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);

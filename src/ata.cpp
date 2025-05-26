@@ -190,7 +190,9 @@ int main(int argc, char **argv) {
   cudaMemset(d_C_classic, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
-    GPU_AtB(d_A, d_A, d_C_classic, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
+    Float alpha = 1.0;
+    Float beta = 0.0;
+    cublasSyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, N, M, &alpha, d_A, N, &beta, d_C_classic, N);
   }
   ct.stop();
 
@@ -226,11 +228,12 @@ int main(int argc, char **argv) {
 
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
-  printf ("M: %d; N: %d; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
+  printf ("M: %d; N: %d; cuBLAS time: %.2f; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
+
+  Float ata_absErr = 0.0;
+  Float rtxx_absErr = 0.0;
 
   if (check) {
-    Float ata_absErr = 0.0;
-    Float rtxx_absErr = 0.0;
     for (int i = 0; i < N; i++) {
       for (int j = 0; j <= i; j++) {
         ata_absErr += abs(ata_C[i * N + j] - classic_C[i * N + j]);

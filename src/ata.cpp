@@ -149,9 +149,11 @@ int main(int argc, char **argv) {
     rtxx_C[i] = 0.0;
   }
 
-  Float *d_A, *d_C;
+  Float *d_A, *d_C_ata, *d_C_rtxx, *d_C_classic;
   cudaMalloc((void **)&d_A, memSizeA);
-  cudaMalloc((void **)&d_C, memSizeC);
+  cudaMalloc((void **)&d_C_ata, memSizeC);
+  cudaMalloc((void **)&d_C_rtxx, memSizeC);
+  cudaMalloc((void **)&d_C_classic, memSizeC);
   cudaMemcpy(d_A, h_A, memSizeA, cudaMemcpyHostToDevice);
 
   if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
@@ -163,34 +165,64 @@ int main(int argc, char **argv) {
   CudaTimer ct;
 
   // ATA algorithm
+  cudaMemset(d_C_ata, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
-    ata(d_A, d_C, N, N, N, N, M, N, depth);
+    ata(d_A, d_C_ata, N, N, N, N, M, N, depth);
   }
   ct.stop();
 
   float ataTime = ct.value() / iter;
-  cudaMemcpy(ata_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+  cudaMemcpy(ata_C, d_C_ata, memSizeC, cudaMemcpyDeviceToHost);
 
   // RTXX algorithm
+  cudaMemset(d_C_rtxx, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
-    rtxx(d_A, d_C, N, N, N, N, M, N, depth);
+    rtxx(d_A, d_C_rtxx, N, N, N, N, M, N, depth);
   }
   ct.stop();
 
   float rtxxTime = ct.value() / iter;
-  cudaMemcpy(rtxx_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+  cudaMemcpy(rtxx_C, d_C_rtxx, memSizeC, cudaMemcpyDeviceToHost);
 
   // Classic algorithm
+  cudaMemset(d_C_classic, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
-    GPU_AtB(d_A, d_A, d_C, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
+    GPU_AtB(d_A, d_A, d_C_classic, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
   }
   ct.stop();
 
   float classicTime = ct.value() / iter;
-  cudaMemcpy(classic_C, d_C, memSizeC, cudaMemcpyDeviceToHost);
+  cudaMemcpy(classic_C, d_C_classic, memSizeC, cudaMemcpyDeviceToHost);
+
+  // Print first 4x4 elements of each matrix
+  printf("\nFirst 4x4 elements of each matrix:\n");
+  printf("ATA result:\n");
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      printf("%.6f ", ata_C[i * N + j]);
+    }
+    printf("\n");
+  }
+  
+  printf("\nRTXX result:\n");
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      printf("%.6f ", rtxx_C[i * N + j]);
+    }
+    printf("\n");
+  }
+  
+  printf("\nClassic result:\n");
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      printf("%.6f ", classic_C[i * N + j]);
+    }
+    printf("\n");
+  }
+  printf("\n");
 
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
@@ -254,7 +286,9 @@ int main(int argc, char **argv) {
   free(rtxx_C);
   free(classic_C);
   cudaFree(d_A);
-  cudaFree(d_C);
+  cudaFree(d_C_ata);
+  cudaFree(d_C_rtxx);
+  cudaFree(d_C_classic);
 
   if (cublasDestroy(handle) != CUBLAS_STATUS_SUCCESS) {
     fprintf(stderr, "!!!! cuBLAS shutdown error\n");

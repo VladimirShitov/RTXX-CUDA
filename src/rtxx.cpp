@@ -353,7 +353,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // print_matrix_4x4("m24", C11);
 
         // z3 = m3 + m17 - m24 -> C23
-        GPU_add(C34, C42, C23, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // m17 + m3
+        GPU_add(C34, C42, C23, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // m17 + m3
         // m24 = (-X1 + X4 + X12) @ X16.T -> C23
         GPU_add(X4, X1, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
         GPU_add(C11, X12, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);

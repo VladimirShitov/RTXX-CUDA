@@ -5,14 +5,14 @@ typedef double Float;
 #define cublasGeam cublasDgeam
 #define cublasGemm cublasDgemm
 #define cublasSyrk cublasDsyrk
-#define CUTOFF 256
+#define CUTOFF 1
 
 #else
 typedef float Float;
 #define cublasGeam cublasSgeam
 #define cublasGemm cublasSgemm
 #define cublasSyrk cublasSsyrk
-#define CUTOFF 1536
+#define CUTOFF 1
 
 #endif  // FLOAT_AS_DOUBLE
 

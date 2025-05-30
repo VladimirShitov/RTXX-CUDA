@@ -200,33 +200,6 @@ int main(int argc, char **argv) {
   float classicTime = ct.value() / iter;
   cudaMemcpy(classic_C, d_C_classic, memSizeC, cudaMemcpyDeviceToHost);
 
-  // Print first 4x4 elements of each matrix
-  printf("\nFirst 4x4 elements of each matrix:\n");
-  printf("ATA result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", ata_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  
-  printf("\nRTXX result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", rtxx_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  
-  printf("\nClassic result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", classic_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
   printf ("M: %d; N: %d; cuBLAS time: %.2f; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
@@ -244,11 +217,8 @@ int main(int argc, char **argv) {
     int numel = N * (N + 1) / 2;
     printf("ATA: Mean absolute error: %g\n", ata_absErr / numel);
     printf("RTXX: Mean absolute error: %g\n", rtxx_absErr / numel);
-  }
 
-  if (check) {
-    // Split matrices into blocks and compute error for each block
-    
+    // Split matrices into blocks and compute error for each block    
     printf("\nBlock-wise absolute errors:\n");
     printf("Format: (ATA error / RTXX error)\n\n");
 

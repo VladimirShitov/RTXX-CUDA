@@ -203,27 +203,27 @@ int main(int argc, char **argv) {
 
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
-  
-  if (!no_header) {
-    printf("M\tN\tdepth\tcuBLAS_time\tAtA_time\tRTXX_time\tATA_speedup\tRTXX_speedup\n");
-  }
-  printf("%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", 
-         M, N, depth, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
 
   Float ata_absErr = 0.0;
   Float rtxx_absErr = 0.0;
 
-  if (check) {
-    for (int i = 0; i < N; i++) {
+  for (int i = 0; i < N; i++) {
       for (int j = 0; j <= i; j++) {
         ata_absErr += abs(ata_C[i * N + j] - classic_C[i * N + j]);
         rtxx_absErr += abs(rtxx_C[i * N + j] - classic_C[i * N + j]);
       }
     }
-    int numel = N * (N + 1) / 2;
-    printf("ATA: Mean absolute error: %g\n", ata_absErr / numel);
-    printf("RTXX: Mean absolute error: %g\n", rtxx_absErr / numel);
+  int numel = N * (N + 1) / 2;
+  
+  if (!no_header) {
+    printf("M\tN\tdepth\tcuBLAS_time\tAtA_time\tRTXX_time\tATA_speedup\tRTXX_speedup\tATA_MAE\tRTXX_MAE\n");
+  }
+  printf("%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", 
+         M, N, depth, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup, ata_absErr / numel, rtxx_absErr / numel);
 
+
+
+  if (check) {
     // Split matrices into blocks and compute error for each block    
     printf("\nBlock-wise absolute errors:\n");
     printf("Format: (ATA error / RTXX error)\n\n");

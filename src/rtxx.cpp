@@ -503,8 +503,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // print_matrix_4x4("m23", C11);
 
-        // z4 = m2 + m11 + m23
-        GPU_add(C21, C23, C11);
+        // z4 = m2 + m11 + m23 -> C21
+        GPU_add(C21, C23, C21);
         // |                  | z4               | m7               | w5               |
         // | ---------------- | m22-z1           | m12              | m3               |
         // | m5+m8            | m23              | w7               | w3               |

@@ -318,9 +318,9 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // Use z1 to calculate C12 and C22
         GPU_add(C22, C12, C22, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0); // m22 - z1
-        GPU_add(C23, C12, C23, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0); // m2 - m5 - z1 + m13, only m19 is needed to calculate C12
+        GPU_add(C23, C12, C12, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0); // m2 - m5 - z1 + m13, only m19 is needed to calculate C12
         // |                  | m2+m11           | m7               | w5               |
-        // |                  | m22-z1           | m12              | m3               |
+        // | m22-z1           |                  | m12              | m3               |
         // | m5+m8            | m2-m5+m13-z1     | w7               | w3               |
         // | m13              | m14              | m17              | w11              |
         // z1 is not needed anymore and can be rewritten
@@ -330,21 +330,12 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // m19 = -w11 @ (-X15 + X7 + X8) -> C12
         GPU_add(X7, X15, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
         GPU_add(C11, X8, C11, ldc, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C44, C11, C12, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, -1.0, 0.0);
+        GPU_ABt(C44, C11, C12, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, -1.0, 1.0);
         // |                  | m2+m11           | m7               | w5               |
         // | m19              | m22-z1           | m12              | m3               |
         // | m5+m8            | m2-m5+m13-z1     | w7               | w3               |
         // | m13              | m14              | m17              |                  |
         // w11 is not needed anymore and can be rewritten
-        
-        // print_matrix_4x4("m19", C11);
-
-        // C12 = m19 + [C23]
-        GPU_add(C23, C12, C12, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        // |                  | m2+m11           | m7               | w5               |
-        // | ---------------- | m22-z1           | m12              | m3               |
-        // | m5+m8            |                  | w7               | w3               |
-        // | m13              | m14              | m17              |                  |
 
         // print_matrix_4x4("C12", C11);
 

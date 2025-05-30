@@ -120,51 +120,13 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
     bool stop = (mm + nn) >= 2;
 
     if (depth <= 1 || stop) {
-        GPU_ABt(A_mat, A_mat, C_mat, 1.0, 0.0);
+        Float alpha = 1.0;
+        Float beta = 0.0;
+        cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, XA, YA, &alpha, A, lda, &beta, C, ldc);
 
-        // Fill in lower left triangle of the matrix
-        // for(int i=0; i<4; i++) {
-        //     for(int j=0; j<4; j++) {
-        //         Matrix C_curr = C_mat.view(i*XC4, j*YC4, XC4, YC4);
-
-        //         for(int k=0; k<4; k++) {
-        //             Matrix X_i = A_mat.view(i*XA4, k*YA4, XA4, YA4);
-        //             Matrix X_j = A_mat.view(j*XA4, k*YA4, XA4, YA4);
-
-        //             if (k == 0) {
-        //                 GPU_ABt(X_i, X_j, W1_mat, 1.0, 0.0);
-        //             }
-        //             else if(k == 1) {
-        //                 GPU_ABt(X_i, X_j, W2_mat, 1.0, 0.0);
-        //                 GPU_add(W1_mat, W2_mat, C_curr);
-        //             } 
-        //             else {
-        //                 GPU_ABt(X_i, X_j, W1_mat, 1.0, 0.0);
-        //                 GPU_add(C_curr, W1_mat, C_curr);
-        //             }  
-        //         }
-        //     }
-        // }
+        // GPU_ABt(A_mat, A_mat, C_mat, 1.0, 0.0);
     }
     else {
-        // Normal version
-        // Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
-        // Matrix X2 = A_mat.view(   XA4,      0, XA4, YA4);
-        // Matrix X3 = A_mat.view(2*XA4,       0, XA4, YA4);
-        // Matrix X4 = A_mat.view(3*XA4,       0, XA4, YA4);
-        // Matrix X5 = A_mat.view(     0,    YA4, XA4, YA4);
-        // Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
-        // Matrix X7 = A_mat.view( 2*XA4,    YA4, XA4, YA4);
-        // Matrix X8 = A_mat.view( 3*XA4,    YA4, XA4, YA4);
-        // Matrix X9 = A_mat.view(     0,  2*YA4, XA4, YA4);
-        // Matrix X10 = A_mat.view(  XA4,  2*YA4, XA4, YA4);
-        // Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
-        // Matrix X12 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
-        // Matrix X13 = A_mat.view(    0,  3*YA4, XA4, YA4);
-        // Matrix X14 = A_mat.view(  XA4,  3*YA4, XA4, YA4);
-        // Matrix X15 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
-        // Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
-
         // Transposed version
         Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
         Matrix X2 = A_mat.view(     0,    YA4, XA4, YA4);

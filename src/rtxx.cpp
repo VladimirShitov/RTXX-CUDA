@@ -100,11 +100,6 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         Float *C43 = C + 3 * XC4 + 2 * YC4 * ldc;
         Float *C44 = C + 3 * XC4 + 3 * YC4 * ldc;
 
-        // We need to store transposed matrix for Strassen calls
-        Float *Xt;
-        int ldt = YA4;
-        cudaMalloc((void **)&Xt, ldt * XA4 * sizeof(Float));
-
         // Memory layout of the matrices
         // We use column index first to use the same notation as in the paper, but fill lower left triangle
         // | C11       | C21       | C31       | C41       |
@@ -698,7 +693,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // print_matrix_4x4("z6", C11);
 
         // C33 = m4 - z7 - z8 + m26
-        GPU_add(C21, C33, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // m26 + m4
+        GPU_add(C21, C33, C33, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // m26 + m4
         GPU_add(C33, C31, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // - z7
         GPU_add(C33, C34, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // - z8
         // |                  | m4               | z7               | m10+z2           |
@@ -769,8 +764,6 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         rtxx(X16, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
         GPU_add(C21, C44, C44, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        cudaFree(Xt);
     }
 
     /* dynamic peeling fix-up */

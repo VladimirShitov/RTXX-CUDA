@@ -190,9 +190,10 @@ int main(int argc, char **argv) {
   cudaMemset(d_C_classic, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
+    // GPU_AtB(d_A, d_A, d_C_classic, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
     Float alpha = 1.0;
     Float beta = 0.0;
-    cublasSyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, N, M, &alpha, d_A, N, &beta, d_C_classic, N);
+    cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, N, M, &alpha, d_A, N, &beta, d_C_classic, N);
   }
   ct.stop();
 
@@ -246,15 +247,18 @@ int main(int argc, char **argv) {
   }
 
   if (check) {
-    // Split matrices into 4x4 blocks and compute error for each block
-    int block_rows = N/4;
-    int block_cols = N/4;
+    // Split matrices into blocks and compute error for each block
     
     printf("\nBlock-wise absolute errors:\n");
     printf("Format: (ATA error / RTXX error)\n\n");
+
+    const int N_BLOCKS = 4;
+
+    int block_rows = N / N_BLOCKS;
+    int block_cols = N / N_BLOCKS;
     
-    for (int bi = 0; bi < 4; bi++) {
-      for (int bj = 0; bj < 4; bj++) {
+    for (int bi = 0; bi < N_BLOCKS; bi++) {
+      for (int bj = 0; bj < N_BLOCKS; bj++) {
         Float ata_block_err = 0.0;
         Float rtxx_block_err = 0.0;
         int block_elements = 0;
@@ -274,9 +278,7 @@ int main(int argc, char **argv) {
         if (block_elements > 0) {
           ata_block_err /= block_elements;
           rtxx_block_err /= block_elements;
-          printf("(%g / %g) ", ata_block_err, rtxx_block_err);
-        } else {
-          printf("(-- / --) ");
+          printf("(%.3f / %.3f)\t", ata_block_err, rtxx_block_err);
         }
       }
       printf("\n");

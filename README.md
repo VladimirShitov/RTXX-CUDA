@@ -50,8 +50,6 @@ Format: (ATA error / RTXX error)
 ./bin/ata-sp <N> <M> <n_iterations> <check> <recursion_depth> <hide_header>
 ```
 
-For building 
-
 ### Running the benchmark – comparison with SYRK and AtA
 
 Build the binaries and then run:

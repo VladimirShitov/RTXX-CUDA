@@ -620,30 +620,22 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // print_matrix_4x4("m4", C11);
 
-        // m26 = (X6 + X10 + X12) @ X10.T -> C32
-        GPU_add(X6, X10, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(C11, X12, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X10, C33, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
-        // |                  | m4               | z7               | m10+z2           |
-        // | ---------------- | ---------------- | m16              | m3+z5+z8         |
-        // | m18+m20          | z3+m15+z2        | m26              | w1               |
-        // | ---------------- | m14+z4+m16       | z8               |                  |
-
-        // print_matrix_4x4("m26", C11);
-
         // z6 = m4 - m18 - m20 -> C13
         GPU_add(C21, C13, C13, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
         // |                  | m4               | z7               | m10+z2           |
         // | ---------------- | ---------------- | m16              | m3+z5+z8         |
-        // | z6               | z3+m15+z2        | m26              | w1               |
+        // | z6               | z3+m15+z2        |                  | w1               |
         // | ---------------- | m14+z4+m16       | z8               |                  |
 
         // print_matrix_4x4("z6", C11);
 
         // C33 = m4 - z7 - z8 + m26
-        GPU_add(C21, C33, C33, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // m26 + m4
-        GPU_add(C33, C31, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // - z7
+        GPU_add(C21, C31, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // m4 - z7
         GPU_add(C33, C34, C33, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // - z8
+        // m26 = (X6 + X10 + X12) @ X10.T -> C33
+        GPU_add(X6, X10, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
+        GPU_add(C11, X12, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
+        GPU_ABt(C11, X10, C33, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 1.0);
         // |                  | m4               | z7               | m10+z2           |
         // | ---------------- | ---------------- | m16              | m3+z5+z8         |
         // | z6               | z3+m15+z2        | ---------------- | w1               |

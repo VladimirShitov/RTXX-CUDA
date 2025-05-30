@@ -471,18 +471,17 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // m9 = X6 @ (w7 - w6 + w3).T -> C21
         GPU_add(C33, C44, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // w7 - w6
         GPU_add(C11, C43, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // + w3
-        GPU_ABt(X6, C11, C21, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
-        // |                  | m9               | m7               | w5               |
+        GPU_ABt(X6, C11, C31, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 1.0); // += m7 to calculate z7 later
+        // |                  |                  | m7+m9            | w5               |
         // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
         // | m18              | z3               | w7               | w3               |
         // | ---------------- | m14+z4           | z8               | w6               |
 
         // print_matrix_4x4("m9", C11);
 
-        // m9 +> m7 to calculate z7 later; Also +> w6 to w5
-        GPU_add(C31, C21, C31, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
+        // w6 +> w5
         GPU_add(C44, C41, C41, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        // |                  | m9               | m7+m9            | w5+w6            |
+        // |                  |                  | m7+m9            | w5+w6            |
         // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
         // | m18              | z3               | w7               | w3               |
         // | ---------------- | m14+z4           | z8               |                  |

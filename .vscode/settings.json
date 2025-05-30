@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.cu": "cpp"
-    },
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.configureOnOpen": true
-}

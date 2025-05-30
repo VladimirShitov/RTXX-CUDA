@@ -119,8 +119,8 @@ void ata(Float *A, Float *C, int lda, int ldc,
 
 
 int main(int argc, char **argv) {
-  if(argc != 6) {
-    printf("Usage: %s <M> <N> <iter> <check> <depth>\n", argv[0]);
+  if(argc != 7) {
+    printf("Usage: %s <M> <N> <iter> <check> <depth> <no_header>\n", argv[0]);
     return -1;
   }
 
@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
   int iter = atoi(argv[3]);
   int check = atoi(argv[4]);
   int depth = atoi(argv[5]);
+  int no_header = atoi(argv[6]);
 
   int sizeA = M * N;
   int sizeC = N * N;
@@ -190,68 +191,50 @@ int main(int argc, char **argv) {
   cudaMemset(d_C_classic, 0, memSizeC);  // Clear before each algorithm
   ct.start();
   for (int i = 0; i < iter; i++) {
-    GPU_AtB(d_A, d_A, d_C_classic, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
+    // GPU_AtB(d_A, d_A, d_C_classic, N, N, N, M, N, N, N, M, N, 1.0, 0.0);
+    Float alpha = 1.0;
+    Float beta = 0.0;
+    cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, N, M, &alpha, d_A, N, &beta, d_C_classic, N);
   }
   ct.stop();
 
   float classicTime = ct.value() / iter;
   cudaMemcpy(classic_C, d_C_classic, memSizeC, cudaMemcpyDeviceToHost);
 
-  // Print first 4x4 elements of each matrix
-  printf("\nFirst 4x4 elements of each matrix:\n");
-  printf("ATA result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", ata_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  
-  printf("\nRTXX result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", rtxx_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  
-  printf("\nClassic result:\n");
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      printf("%.6f ", classic_C[i * N + j]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
-  printf ("M: %d; N: %d; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
 
-  if (check) {
-    Float ata_absErr = 0.0;
-    Float rtxx_absErr = 0.0;
-    for (int i = 0; i < N; i++) {
+  Float ata_absErr = 0.0;
+  Float rtxx_absErr = 0.0;
+
+  for (int i = 0; i < N; i++) {
       for (int j = 0; j <= i; j++) {
         ata_absErr += abs(ata_C[i * N + j] - classic_C[i * N + j]);
         rtxx_absErr += abs(rtxx_C[i * N + j] - classic_C[i * N + j]);
       }
     }
-    int numel = N * (N + 1) / 2;
-    printf("ATA: Mean absolute error: %g\n", ata_absErr / numel);
-    printf("RTXX: Mean absolute error: %g\n", rtxx_absErr / numel);
+  int numel = N * (N + 1) / 2;
+  
+  if (!no_header) {
+    printf("M\tN\tdepth\tcuBLAS_time\tAtA_time\tRTXX_time\tATA_speedup\tRTXX_speedup\tATA_MAE\tRTXX_MAE\n");
   }
+  printf("%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", 
+         M, N, depth, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup, ata_absErr / numel, rtxx_absErr / numel);
+
+
 
   if (check) {
-    // Split matrices into 4x4 blocks and compute error for each block
-    int block_rows = N/4;
-    int block_cols = N/4;
-    
+    // Split matrices into blocks and compute error for each block    
     printf("\nBlock-wise absolute errors:\n");
     printf("Format: (ATA error / RTXX error)\n\n");
+
+    const int N_BLOCKS = 4;
+
+    int block_rows = N / N_BLOCKS;
+    int block_cols = N / N_BLOCKS;
     
-    for (int bi = 0; bi < 4; bi++) {
-      for (int bj = 0; bj < 4; bj++) {
+    for (int bi = 0; bi < N_BLOCKS; bi++) {
+      for (int bj = 0; bj < N_BLOCKS; bj++) {
         Float ata_block_err = 0.0;
         Float rtxx_block_err = 0.0;
         int block_elements = 0;
@@ -271,9 +254,7 @@ int main(int argc, char **argv) {
         if (block_elements > 0) {
           ata_block_err /= block_elements;
           rtxx_block_err /= block_elements;
-          printf("(%g / %g) ", ata_block_err, rtxx_block_err);
-        } else {
-          printf("(-- / --) ");
+          printf("(%.3f / %.3f)\t", ata_block_err, rtxx_block_err);
         }
       }
       printf("\n");

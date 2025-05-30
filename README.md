@@ -99,7 +99,7 @@ This repo:
 ```
 
 ## What to improve?
-- **Use Strassen's algorithm to multiply matrices** (if you can make it faster than cuBLAS) 🚋 Implementation here is different from the paper and relies on SYRK for multiplying matrices smaller than a cutoff. While Strassen's algorithm is algorithmically better, using its open source implementation actually makes the code slower! Can you improve it? Here's a great paper to try it out 🚀
+- **Use Strassen's algorithm to multiply matrices** (if you can make it faster than cuBLAS). Implementation here is different from the paper and relies on SYRK for multiplying matrices smaller than a cutoff. While Strassen's algorithm is algorithmically better, using its open source implementation actually makes the code slower! Can you improve it? Here's a great paper to try it out 🚀
 - **Remove a couple of excess computations** 📉 Here, several additions are wasted. The most obvious one is `y1` from the paper: I calculate it twice to not waste memory. Another unnecessary addition comes from storing `m22`. Explore the [computations graph](computation_graph_visualisation.html) to find more. The comments in [rtxx.cpp](src/rtxx.cpp) and [this spreadsheet](https://docs.google.com/spreadsheets/d/1fJWRUvirtdAIE_I4JtjnsC51hORBDOxCz3ZavM7MFaY/edit?usp=sharing) visualise the current algorithm.
 - **Suggest a better in-memory algorithm** 🧠 How to find a general algorithm computing such a complex graph in-place is an interesting topological sorting task. Here, I did it pretty much manually, and I'm pretty sure it can be improved.
 - **Write a custom CUDA kernel** and beat the cuBLAS 💪

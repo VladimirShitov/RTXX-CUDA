@@ -119,8 +119,8 @@ void ata(Float *A, Float *C, int lda, int ldc,
 
 
 int main(int argc, char **argv) {
-  if(argc != 6) {
-    printf("Usage: %s <M> <N> <iter> <check> <depth>\n", argv[0]);
+  if(argc != 7) {
+    printf("Usage: %s <M> <N> <iter> <check> <depth> <no_header>\n", argv[0]);
     return -1;
   }
 
@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
   int iter = atoi(argv[3]);
   int check = atoi(argv[4]);
   int depth = atoi(argv[5]);
+  int no_header = atoi(argv[6]);
 
   int sizeA = M * N;
   int sizeC = N * N;
@@ -202,7 +203,12 @@ int main(int argc, char **argv) {
 
   float ata_speedup = classicTime / ataTime;
   float rtxx_speedup = classicTime / rtxxTime;
-  printf ("M: %d; N: %d; cuBLAS time: %.2f; AtA time: %.2f; RTXX time: %.2f; ATA speedup: %.2f; RTXX speedup: %.2f\n", M, N, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
+  
+  if (!no_header) {
+    printf("M\tN\tdepth\tcuBLAS_time\tAtA_time\tRTXX_time\tATA_speedup\tRTXX_speedup\n");
+  }
+  printf("%d\t%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", 
+         M, N, depth, classicTime, ataTime, rtxxTime, ata_speedup, rtxx_speedup);
 
   Float ata_absErr = 0.0;
   Float rtxx_absErr = 0.0;

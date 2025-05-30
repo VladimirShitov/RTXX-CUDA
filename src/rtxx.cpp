@@ -339,24 +339,14 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // print_matrix_4x4("C12", C11);
 
-        // m23 = X1 @ (X13 - X5 + X16) -> C23
+        // m23 = X1 @ (X13 - X5 + X16) -> C21 to compute z4 = m2 + m11 + m23
         GPU_add(X13, X5, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
         GPU_add(C11, X16, C11, ldc, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(X1, C11, C23, lda, ldc, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
-        // |                  | m2+m11           | m7               | w5               |
-        // | ---------------- | m22-z1           | m12              | m3               |
-        // | m5+m8            | m23              | w7               | w3               |
-        // | m13              | m14              | m17              |                  |
-
-        // print_matrix_4x4("m23", C11);
-
-        // z4 = m2 + m11 + m23 -> C21
-        GPU_add(C21, C23, C21, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
+        GPU_ABt(X1, C11, C21, lda, ldc, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 1.0);
         // |                  | z4               | m7               | w5               |
         // | ---------------- | m22-z1           | m12              | m3               |
-        // | m5+m8            | m23              | w7               | w3               |
+        // | m5+m8            |                  | w7               | w3               |
         // | m13              | m14              | m17              |                  |
-        // m23 is not needed anymore and can be rewritten
 
         // print_matrix_4x4("z4", C11);
 

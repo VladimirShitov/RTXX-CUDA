@@ -42,30 +42,12 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
     float nn = (float)CUTOFF / YA4;
     bool stop = (mm + nn) >= 2;
 
-    if (depth <= 1 || stop) {
+    if (depth < 1 || stop) {
         Float alpha = 1.0;
         Float beta = 0.0;
         cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, XA, YA, &alpha, A, lda, &beta, C, ldc);
     }
     else {
-        // Transposed version
-        // Matrix X1 = A_mat.view(     0,      0, XA4, YA4);
-        // Matrix X2 = A_mat.view(     0,    YA4, XA4, YA4);
-        // Matrix X3 = A_mat.view(     0,  2*YA4, XA4, YA4);
-        // Matrix X4 = A_mat.view(     0,  3*YA4, XA4, YA4);
-        // Matrix X5 = A_mat.view(   XA4,     0, XA4, YA4);
-        // Matrix X6 = A_mat.view(   XA4,    YA4, XA4, YA4);
-        // Matrix X7 = A_mat.view(   XA4,  2*YA4, XA4, YA4);
-        // Matrix X8 = A_mat.view(   XA4,  3*YA4, XA4, YA4);
-        // Matrix X9 = A_mat.view( 2*XA4,      0, XA4, YA4);
-        // Matrix X10 = A_mat.view(2*XA4,    YA4, XA4, YA4);
-        // Matrix X11 = A_mat.view(2*XA4,  2*YA4, XA4, YA4);
-        // Matrix X12 = A_mat.view(2*XA4,  3*YA4, XA4, YA4);
-        // Matrix X13 = A_mat.view(3*XA4,      0, XA4, YA4);
-        // Matrix X14 = A_mat.view(3*XA4,    YA4, XA4, YA4);
-        // Matrix X15 = A_mat.view(3*XA4,  2*YA4, XA4, YA4);
-        // Matrix X16 = A_mat.view(3*XA4,  3*YA4, XA4, YA4);
-
         Float *X1 = A;
         Float *X2 = A + YA4 * lda;
         Float *X3 = A + 2 * YA4 * lda;

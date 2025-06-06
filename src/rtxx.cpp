@@ -3,6 +3,12 @@
 
 #include "strassen.cpp"
 
+#ifdef FLOAT_AS_DOUBLE
+#define CUDA_FLOAT_TYPE CUDA_R_64F
+#else
+#define CUDA_FLOAT_TYPE CUDA_R_32F
+#endif
+
 cublasHandle_t handle;
 
 void GPU_ABt(Float *A, Float *B, Float *C,
@@ -14,7 +20,7 @@ void GPU_ABt(Float *A, Float *B, Float *C,
     // A is XA x YA
     // B is XB x YB
     // C is XA x XB
-    cublasGemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, XA, XB, YA, &alpha, A, lda, B, ldb, &beta, C, ldc);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_T, XA, XB, YA, &alpha, A, CUDA_FLOAT_TYPE, lda, B, CUDA_FLOAT_TYPE, ldb, &beta, C, CUDA_FLOAT_TYPE, ldc, CUDA_FLOAT_TYPE, CUBLAS_GEMM_DEFAULT);
 }
 
 void GPU_T(Float *A, Float *C, int lda, int ldc, int XA, int YA, Float alpha = 1.0) {
@@ -27,7 +33,7 @@ void GPU_AtB(Float *A, Float *B, Float *C,
     int XA, int XB, int XC,
     int YA, int YB, int YC,
     Float alpha, Float beta) {
-    cublasGemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, XB, YA, XA, &alpha, B, ldb, A, lda, &beta, C, ldc);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_T, XB, YA, XA, &alpha, B, CUDA_FLOAT_TYPE, ldb, A, CUDA_FLOAT_TYPE, lda, &beta, C, CUDA_FLOAT_TYPE, ldc, CUDA_FLOAT_TYPE, CUBLAS_GEMM_DEFAULT);
 }
 
 void rtxx(Float *A, Float *C, int lda, int ldc,

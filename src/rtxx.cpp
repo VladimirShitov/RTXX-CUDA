@@ -576,28 +576,16 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | ---------------- | ---------------- | ---------------- |                  |
         // | ---------------- | ---------------- | ---------------- |                  |
 
-        // Recursively calculate C11
-        rtxx(X1, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        rtxx(X2, C31, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
+        // Calculate C11 = X1@X1.T + X2@X2.T + X3@X3.T + X4@X4.T efficiently using single SYRK
+        // X1-X4 form the first column block: XA4 × YA submatrix starting at A
+        Float alpha = 1.0;
+        Float beta = 0.0;
+        
+        cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, XA4, YA, &alpha, X1, lda, &beta, C11, ldc);
 
-        GPU_add(C21, C31, C11, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        rtxx(X3, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        GPU_add(C21, C11, C11, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        rtxx(X4, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        GPU_add(C21, C11, C11, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        // Recursively calculate C44
-        rtxx(X13, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        rtxx(X14, C31, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        GPU_add(C21, C31, C44, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        rtxx(X15, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        GPU_add(C21, C44, C44, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-
-        rtxx(X16, C21, lda, ldc, XA4, XC4, YA4, YC4, depth - 1);
-        GPU_add(C21, C44, C44, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
+        // Calculate C44 = X13@X13.T + X14@X14.T + X15@X15.T + X16@X16.T efficiently using single SYRK
+        // X13-X16 form the last column block: XA4 × YA submatrix starting at X13
+        cublasSyrk(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, XA4, YA, &alpha, X13, lda, &beta, C44, ldc);
     }
 
     /* dynamic peeling fix-up */

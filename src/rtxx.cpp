@@ -2,6 +2,7 @@
 #include <cuda_runtime_api.h>
 
 #include "strassen.cpp"
+#include "rtxx.h"
 
 #ifdef FLOAT_AS_DOUBLE
 #define CUDA_FLOAT_TYPE CUDA_R_64F
@@ -155,8 +156,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |                  |                  | m17              |                  |
 
         // m11 = (X5 + w10) @ X5.T -> C12
-        GPU_add(X5, C43, C11, lda, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X5, C12, ldc, lda, ldc, XC4, XA4, XC4, YC4, YA4, YC4, 1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(X5, C43, X5, C12, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  |                  | w2               | w5               |
         // | m11              | m22              | w4               | w9               |
         // |                  |                  |                  | w10              |
@@ -208,8 +208,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m13              |                  | m17              |                  |
 
         // m3 = (-X2 + X12) @ w5.T -> C42
-        GPU_add(X12, X2, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, C41, C42, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, 1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(X12, X2, C41, C42, lda, lda, ldc, ldc, XC4, YC4, YC4, -1.0, 1.0, 1.0);
         // |                  | m2               | w2               | w5               |
         // | m11              | m22              | w4               | m3               |
         // | m8               | m5               |                  | w3               |

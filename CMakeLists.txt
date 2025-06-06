@@ -7,12 +7,25 @@ project(AtA-gpu CUDA CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set CUDA architectures for M1/M2 Macs
-set(CMAKE_CUDA_ARCHITECTURES 87)  # For Apple Silicon GPUs
+# CUDA Configuration
+if(APPLE)
+    # For Apple Silicon GPUs
+    set(CMAKE_CUDA_ARCHITECTURES 87)
+else()
+    # For other systems, detect architecture or set manually
+    set(CMAKE_CUDA_ARCHITECTURES 70 75 80 86)
+endif()
 
-# Find required packages
-find_package(CUDA REQUIRED)
+# Enable CUDA language
+enable_language(CUDA)
+
+# Find CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
+
+# Print CUDA information
+message(STATUS "Found CUDA ${CUDAToolkit_VERSION}")
+message(STATUS "CUDA Include Dirs: ${CUDAToolkit_INCLUDE_DIRS}")
+message(STATUS "CUDA Library Dirs: ${CUDAToolkit_LIBRARY_DIR}")
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -31,14 +44,14 @@ set_target_properties(ata_gpu PROPERTIES
 )
 
 # Link against CUDA libraries
-target_link_libraries(ata_gpu PRIVATE 
+target_link_libraries(ata_gpu PUBLIC 
     CUDA::cudart
     CUDA::cublas
 )
 
-# Add executable target (if you have a main file)
-add_executable(ata_test src/main.cpp)
-target_link_libraries(ata_test PRIVATE ata_gpu)
+# Add executable target
+add_executable(ata src/ata.cpp)
+target_link_libraries(ata PRIVATE ata_gpu)
 
 # Installation rules
 install(TARGETS ata_gpu

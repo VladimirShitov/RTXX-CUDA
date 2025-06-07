@@ -134,8 +134,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |                  |                  |                  |                  |
 
         // m22 = (-w10) @ (X5 + w9).T -> C22
-        GPU_add(X5, C42, C11, lda, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C43, C11, C22, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, -1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(C43, X5, C42, C22, lda, ldc, lda, ldc, XC4, YC4, YA4, -1.0, 1.0, 1.0);
         // |                  | y2               | w2               | w5               |
         // |                  | m22              |                  | w9               |
         // |                  |                  |                  | w10              |
@@ -171,9 +170,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // |                  |                  | m17              |                  |
 
         // m13 = (-w2 + X3 - w9) @ X15.T -> C14
-        GPU_add(X3, C31, C11, lda, ldc, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(C11, C42, C11, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, X15, C14, ldc, lda, ldc, XC4, XA4, XC4, YC4, YA4, YC4, 1.0, 0.0);
+        GPU_add(X3, C31, C11, lda, ldc, ldc, XA4, YA4, 1.0, -1.0); // X3 - w2
+        GPU_A_plus_B_mul_C_t(C11, C42, X15, C14, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, -1.0, 1.0);
         // |                  |                  | w2               | w5               |
         // | m11              | m22              | w4               |                  |
         // |                  |                  |                  | w3               |
@@ -181,27 +179,24 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // w9 is not needed anymore and can be rewritten
 
         // m8 = X2 @ (w3 - w4 + w5).T -> C13
-        GPU_add(C43, C32, C11, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(C11, C41, C11, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(X2, C11, C13, lda, ldc, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_add(C43, C32, C11, ldc, ldc, ldc, XA4, YA4, 1.0, -1.0);  // w3 - w4
+        GPU_A_mul_B_plus_C_t(X2, C11, C41, C13, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  |                  | w2               | w5               |
         // | m11              | m22              | w4               |                  |
         // | m8               |                  |                  | w3               |
         // | m13              |                  | m17              |                  |
 
         // m5 = (X2 + X11) @ (X15 - w3).T -> C23
-        GPU_add(X2, X11, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(X15, C43, C44, lda, ldc, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, C44, C23, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, 1.0, 0.0);
+        GPU_add(X2, X11, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // X2 + X11
+        GPU_A_mul_B_plus_C_t(C11, X15, C43, C23, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, -1.0);
         // |                  |                  | w2               | w5               |
         // | m11              | m22              | w4               |                  |
         // | m8               | m5               |                  | w3               |
         // | m13              |                  | m17              |                  |
 
         // m2 = (w2 + X7) @ (X15 + X5).T -> C21
-        GPU_add(C31, X7, C11, ldc, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(X15, X5, C44, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, C44, C21, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, 1.0, 0.0);
+        GPU_add(C31, X7, C11, ldc, lda, ldc, XA4, YA4, 1.0, 1.0);  // w2 + X7
+        GPU_A_mul_B_plus_C_t(C11, X15, X5, C21, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  | m2               | w2               | w5               |
         // | m11              | m22              | w4               |                  |
         // | m8               | m5               |                  | w3               |
@@ -223,8 +218,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m13              |                  | m17              |                  |
 
         // m14 = (-w2) @ (w7 + w4).T -> C24
-        GPU_add(C33, C32, C11, ldc, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C31, C11, C24, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, -1.0, 0.0);
+        GPU_A_mul_B_plus_C_t(C31, C33, C32, C24, lda, ldc, lda, ldc, XC4, YC4, YA4, -1.0, 1.0, 1.0);
         // |                  | m2               |                  | w5               |
         // | m11              | m22              |                  | m3               |
         // | m8               | m5               | w7               | w3               |
@@ -262,8 +256,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | m13              | m14              | m17              | w11              |
 
         // m12 = (w11 + X4) @ X8.T -> C32
-        GPU_add(X4, C44, C11, lda, ldc, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X8, C32, ldc, lda, ldc, XC4, XA4, XC4, YC4, YA4, YC4, 1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(C44, X4, X8, C32, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  | m2+m11           | m7               | w5               |
         // | m11              | m22              | m12              | m3               |
         // | m5+m8            | m2-m5+m13        | w7               | w3               |
@@ -287,9 +280,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // z1 is not needed anymore and can be rewritten
 
         // m19 = -w11 @ (-X15 + X7 + X8) -> C12
-        GPU_add(X7, X15, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(C11, X8, C11, ldc, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C44, C11, C12, ldc, ldc, ldc, XC4, XC4, XC4, YC4, YC4, YC4, -1.0, 1.0);
+        GPU_add(X7, X15, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);  // X7 - X15
+        GPU_A_mul_B_plus_C_t(C44, C11, X8, C12, lda, ldc, lda, ldc, XC4, YC4, YA4, -1.0, 1.0, 1.0);
         // |                  | m2+m11           | m7               | w5               |
         // | ---------------- | m22-z1           | m12              | m3               |
         // | m5+m8            |                  | w7               | w3               |
@@ -342,8 +334,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // Note: losing an operation here
         // m18 = X9 @ y1.T = X9 @ (X13 - X14).T -> C13
-        GPU_add(X13, X14, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(X9, C11, C13, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_mul_B_plus_C_t(X9, X13, X14, C13, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, -1.0);
         // |                  | z4               | m7               | w5               |
         // | ---------------- | m22-z1           | m12              | m3+z5            |
         // | m18              | z3               | w7               | w3               |
@@ -397,8 +388,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // m6 = (X6 + X11) @ (w3 - X11).T -> C21
         GPU_add(X6, X11, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(C43, X11, C44, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, C44, C21, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_mul_B_plus_C_t(C11, C43, X11, C21, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, -1.0);
         // |                  | m6               | m7+m9            | w5+w6            |
         // | ---------------- | m22-z1           | m12              | m3+z5+z8         |
         // | m18              | z3               | w7               | w3               |
@@ -438,9 +428,8 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // m10 = (w1 - X3 + X7 + X11) @ X11.T -> C41
         GPU_add(C43, X3, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(C11, X7, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(C11, X11, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X11, C41, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_add(C11, X7, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);  // w1 - X3 + X7
+        GPU_A_plus_B_mul_C_t(C11, X11, X11, C41, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 0.0, 1.0);
         // |                  |                  | z7               | m10              |
         // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
         // | m18              | z3+m15           | w7               | w1               |
@@ -448,8 +437,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // m1 = (-w1 + X3) @ (X8 + X11).T -> C21
         GPU_add(X3, C43, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(X8, X11, C44, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, C44, C21, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_mul_B_plus_C_t(C11, X8, X11, C21, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  | m1               | z7               | m10              |
         // | ---------------- | m6+m22-z1        | m12              | m3+z5+z8         |
         // | m18              | z3+m15           | w7               | w1               |
@@ -479,16 +467,14 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | ---------------- | m14+z4           | z8               |                  |
 
         // m21 = X8 @ (X12 + w8).T -> C12 to finish z2 calculation
-        GPU_add(X12, C32, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(X8, C11, C21, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 1.0);
+        GPU_A_mul_B_plus_C_t(X8, X12, C32, C21, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  | z2               | z7               | m10              |
         // | ---------------- | ---------------- | w8               | m3+z5+z8         |
         // | m18              | z3+m15           | w7               | w1               |
         // | ---------------- | m14+z4           | z8               |                  |
 
         // m20 = (X5 + w8) @ X9.T -> m18
-        GPU_add(X5, C32, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X9, C13, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 1.0);
+        GPU_A_plus_B_mul_C_t(X5, C32, X9, C13, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         // |                  | z2               | z7               | m10              |
         // | ---------------- | ---------------- |                  | m3+z5+z8         |
         // | m18+m20          | z3+m15           | w7               | w1               |
@@ -506,8 +492,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
 
         // m16 = (X1 - X8) @ (X9 - X16).T -> C32
         GPU_add(X1, X8, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_add(X9, X16, C44, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, C44, C32, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_mul_B_plus_C_t(C11, X9, X16, C32, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, -1.0);
         GPU_add(C32, C24, C24, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
         // |                  |                  | z7               | m10+z2           |
         // | ---------------- | ---------------- | m16              | m3+z5+z8         |
@@ -515,8 +500,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // | ---------------- | m14+z4+m16       | z8               |                  |
 
         // m4 = (X9 - X6) @ w7.T -> C21
-        GPU_add(X9, X6, C11, lda, lda, ldc, XA4, YA4, 1.0, -1.0);
-        GPU_ABt(C11, C33, C21, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(X9, X6, C33, C21, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, -1.0, 1.0);
         // |                  | m4               | z7               | m10+z2           |
         // | ---------------- | ---------------- | m16              | m3+z5+z8         |
         // | m18+m20          | z3+m15+z2        |                  | w1               |
@@ -545,8 +529,7 @@ void rtxx(Float *A, Float *C, int lda, int ldc,
         // C34 = m3 + z5 + z8 + m25
         // m25 = (X9 + X2 + X10) @ X14.T
         GPU_add(X9, X2, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_add(C11, X10, C11, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
-        GPU_ABt(C11, X14, C34, lda, lda, ldc, XA4, XC4, XC4, YA4, YC4, YC4, 1.0, 0.0);
+        GPU_A_plus_B_mul_C_t(C11, X10, X14, C34, lda, ldc, lda, ldc, XC4, YC4, YA4, 1.0, 1.0, 1.0);
         GPU_add(C34, C42, C34, lda, lda, ldc, XA4, YA4, 1.0, 1.0);
         // |                  | m4               | z7               | m10+z2           |
         // | ---------------- | ---------------- | m16              |                  |

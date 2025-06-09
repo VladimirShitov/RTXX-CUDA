@@ -14,7 +14,6 @@ extern cublasHandle_t handle;
 
 // Thread block dimensions for matrix operations
 constexpr int TILE_DIM = 16;
-constexpr int BLOCK_SIZE = 256;
 
 /**
  * Fused kernel: D = alpha * A @ (beta * B + gamma * C)^T + out_coef * D

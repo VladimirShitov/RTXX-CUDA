@@ -17,7 +17,7 @@ constexpr int TILE_DIM = 16;
 constexpr int BLOCK_SIZE = 256;
 
 /**
- * Fused kernel: D = alpha * A @ (beta * B + gamma * C)^T
+ * Fused kernel: D = alpha * A @ (beta * B + gamma * C)^T + out_coef * D
  * 
  * This kernel computes the matrix multiplication of A with the transpose
  * of a linear combination of B and C, all in a single operation.
@@ -34,7 +34,7 @@ constexpr int BLOCK_SIZE = 256;
 __global__ void fused_A_mul_B_plus_C_transpose_kernel(
     const Float* __restrict__ A, const Float* __restrict__ B, const Float* __restrict__ C, Float* __restrict__ D,
     int lda, int ldb, int ldc, int ldd, int M, int N, int K,
-    Float alpha, Float beta, Float gamma) {
+    Float alpha, Float beta, Float gamma, Float out_coef) {
     
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -42,14 +42,14 @@ __global__ void fused_A_mul_B_plus_C_transpose_kernel(
     if (row < M && col < N) {
         Float sum = 0.0;
         
-        // Compute D[row][col] = alpha * sum_k(A[row][k] * (beta * B[col][k] + gamma * C[col][k]))
+        // Compute D[row][col] = out_coef * D[row][col] + alpha * sum_k(A[row][k] * (beta * B[col][k] + gamma * C[col][k]))
         for (int k = 0; k < K; k++) {
             Float a_val = A[row + k * lda];
             Float bc_val = beta * B[col + k * ldb] + gamma * C[col + k * ldc];
             sum += a_val * bc_val;
         }
         
-        D[row + col * ldd] = alpha * sum;
+        D[row + col * ldd] = out_coef * D[row + col * ldd] + alpha * sum;
     }
 }
 
@@ -60,7 +60,7 @@ template<int TileDim>
 __global__ void fused_A_mul_B_plus_C_transpose_tiled_kernel(
     const Float* __restrict__ A, const Float* __restrict__ B, const Float* __restrict__ C, Float* __restrict__ D,
     int lda, int ldb, int ldc, int ldd, int M, int N, int K,
-    Float alpha, Float beta, Float gamma) {
+    Float alpha, Float beta, Float gamma, Float out_coef) {
     
     __shared__ Float tile_A[TILE_DIM][TILE_DIM];
     __shared__ Float tile_BC[TILE_DIM][TILE_DIM];
@@ -102,7 +102,7 @@ __global__ void fused_A_mul_B_plus_C_transpose_tiled_kernel(
     }
     
     if (row < M && col < N) {
-        D[row + col * ldd] = alpha * sum;
+        D[row + col * ldd] = out_coef * D[row + col * ldd] + alpha * sum;
     }
 }
 
@@ -124,7 +124,7 @@ __global__ void fused_A_mul_B_plus_C_transpose_tiled_kernel(
 __global__ void fused_A_plus_B_mul_C_transpose_kernel(
     const Float* __restrict__ A, const Float* __restrict__ B, const Float* __restrict__ C, Float* __restrict__ D,
     int lda, int ldb, int ldc, int ldd, int M, int N, int K,
-    Float alpha, Float beta, Float gamma) {
+    Float alpha, Float beta, Float gamma, Float out_coef) {
     
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -132,14 +132,14 @@ __global__ void fused_A_plus_B_mul_C_transpose_kernel(
     if (row < M && col < N) {
         Float sum = 0.0;
         
-        // Compute D[row][col] = alpha * sum_k((beta * A[row][k] + gamma * B[row][k]) * C[col][k])
+        // Compute D[row][col] = out_coef * D[row][col] + alpha * sum_k((beta * A[row][k] + gamma * B[row][k]) * C[col][k])
         for (int k = 0; k < K; k++) {
             Float ab_val = beta * A[row + k * lda] + gamma * B[row + k * ldb];
             Float c_val = C[col + k * ldc];
             sum += ab_val * c_val;
         }
         
-        D[row + col * ldd] = alpha * sum;
+        D[row + col * ldd] = out_coef * D[row + col * ldd] + alpha * sum;
     }
 }
 
@@ -150,7 +150,7 @@ template<int TileDim>
 __global__ void fused_A_plus_B_mul_C_transpose_tiled_kernel(
     const Float* __restrict__ A, const Float* __restrict__ B, const Float* __restrict__ C, Float* __restrict__ D,
     int lda, int ldb, int ldc, int ldd, int M, int N, int K,
-    Float alpha, Float beta, Float gamma) {
+    Float alpha, Float beta, Float gamma, Float out_coef) {
     
     __shared__ Float tile_AB[TILE_DIM][TILE_DIM];
     __shared__ Float tile_C[TILE_DIM][TILE_DIM];
@@ -192,8 +192,67 @@ __global__ void fused_A_plus_B_mul_C_transpose_tiled_kernel(
     }
     
     if (row < M && col < N) {
-        D[row + col * ldd] = alpha * sum;
+        D[row + col * ldd] = out_coef * D[row + col * ldd] + alpha * sum;
     }
+}
+
+/**
+ * Kernel for computing two output matrices from two input matrices:
+ * C1 = gamma * (alpha * A + beta * B)
+ * C2 = delta * (alpha * A + beta * B)
+ * 
+ * This kernel allows computing a linear combination once and storing it in two
+ * different locations with different coefficients.
+ * 
+ * Parameters:
+ * - A: First input matrix (M x N)
+ * - B: Second input matrix (M x N)
+ * - C1: First output matrix (M x N)
+ * - C2: Second output matrix (M x N)
+ * - alpha: Coefficient for matrix A
+ * - beta: Coefficient for matrix B
+ * - gamma: Coefficient for first output
+ * - delta: Coefficient for second output
+ * - out_coef1: Coefficient for previously stored value of the first output
+ * - out_coef2: Coefficient for previously stored value of the second output
+ */
+__global__ void sum_to_2_kernel(
+    const Float* __restrict__ A, const Float* __restrict__ B,
+    Float* __restrict__ C1, Float* __restrict__ C2,
+    int lda, int ldb, int ldc1, int ldc2, int M, int N,
+    Float alpha, Float beta, Float gamma, Float delta,
+    Float out_coef1, Float out_coef2) {
+    
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (row < M && col < N) {
+        // Compute linear combination once
+        Float sum = alpha * A[row + col * lda] + beta * B[row + col * ldb];
+        
+        // Store in both output locations with respective coefficients and accumulation
+        C1[row + col * ldc1] = out_coef1 * C1[row + col * ldc1] + gamma * sum;
+        C2[row + col * ldc2] = out_coef2 * C2[row + col * ldc2] + delta * sum;
+    }
+}
+
+/**
+ * Host wrapper for computing two output matrices from two input matrices
+ */
+void GPU_sum_to_2(Float *A, Float *B, Float *C1, Float *C2,
+                  int lda, int ldb, int ldc1, int ldc2,
+                  int M, int N,
+                  Float alpha, Float beta, Float gamma, Float delta,
+                  Float out_coef1, Float out_coef2) {
+    
+    dim3 blockSize(TILE_DIM, TILE_DIM);
+    dim3 gridSize((N + TILE_DIM - 1) / TILE_DIM, (M + TILE_DIM - 1) / TILE_DIM);
+    
+    sum_to_2_kernel<<<gridSize, blockSize>>>(
+        A, B, C1, C2, lda, ldb, ldc1, ldc2, M, N,
+        alpha, beta, gamma, delta, out_coef1, out_coef2);
+    
+    cudaDeviceSynchronize();
 }
 
 // Host wrapper functions
@@ -204,7 +263,8 @@ __global__ void fused_A_plus_B_mul_C_transpose_tiled_kernel(
 void GPU_A_mul_B_plus_C_t(Float *A, Float *B, Float *C, Float *D,
                           int lda, int ldb, int ldc, int ldd,
                           int M, int N, int K,
-                          Float alpha, Float beta, Float gamma) {
+                          Float alpha, Float beta, Float gamma,
+                          Float out_coef) {
     
     dim3 blockSize(TILE_DIM, TILE_DIM);
     dim3 gridSize((N + TILE_DIM - 1) / TILE_DIM, (M + TILE_DIM - 1) / TILE_DIM);
@@ -212,13 +272,13 @@ void GPU_A_mul_B_plus_C_t(Float *A, Float *B, Float *C, Float *D,
     if (M >= 64 && N >= 64 && K >= 64) {
         // Use tiled version for larger matrices
         fused_A_mul_B_plus_C_transpose_tiled_kernel<TILE_DIM><<<gridSize, blockSize>>>(
-            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma);
+            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma, out_coef);
     } else {
         // Use simple version for smaller matrices
         dim3 simpleBlockSize(16, 16);
         dim3 simpleGridSize((N + 15) / 16, (M + 15) / 16);
         fused_A_mul_B_plus_C_transpose_kernel<<<simpleGridSize, simpleBlockSize>>>(
-            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma);
+            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma, out_coef);
     }
     
     cudaDeviceSynchronize();
@@ -230,7 +290,8 @@ void GPU_A_mul_B_plus_C_t(Float *A, Float *B, Float *C, Float *D,
 void GPU_A_plus_B_mul_C_t(Float *A, Float *B, Float *C, Float *D,
                           int lda, int ldb, int ldc, int ldd,
                           int M, int N, int K,
-                          Float alpha, Float beta, Float gamma) {
+                          Float alpha, Float beta, Float gamma,
+                          Float out_coef) {
     
     dim3 blockSize(TILE_DIM, TILE_DIM);
     dim3 gridSize((N + TILE_DIM - 1) / TILE_DIM, (M + TILE_DIM - 1) / TILE_DIM);
@@ -238,13 +299,13 @@ void GPU_A_plus_B_mul_C_t(Float *A, Float *B, Float *C, Float *D,
     if (M >= 64 && N >= 64 && K >= 64) {
         // Use tiled version for larger matrices
         fused_A_plus_B_mul_C_transpose_tiled_kernel<TILE_DIM><<<gridSize, blockSize>>>(
-            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma);
+            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma, out_coef);
     } else {
         // Use simple version for smaller matrices
         dim3 simpleBlockSize(16, 16);
         dim3 simpleGridSize((N + 15) / 16, (M + 15) / 16);
         fused_A_plus_B_mul_C_transpose_kernel<<<simpleGridSize, simpleBlockSize>>>(
-            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma);
+            A, B, C, D, lda, ldb, ldc, ldd, M, N, K, alpha, beta, gamma, out_coef);
     }
     
     cudaDeviceSynchronize();

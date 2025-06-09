@@ -255,6 +255,107 @@ void GPU_sum_to_2(Float *A, Float *B, Float *C1, Float *C2,
     cudaDeviceSynchronize();
 }
 
+/**
+ * Kernel for computing linear combination of three matrices with accumulation:
+ * D = alpha * A + beta * B + gamma * C + out_coef * D
+ * 
+ * This kernel allows computing a three-way linear combination and accumulating
+ * with the existing value in a single operation, avoiding temporary storage.
+ * 
+ * Parameters:
+ * - A: First input matrix (M x N)
+ * - B: Second input matrix (M x N)
+ * - C: Third input matrix (M x N)
+ * - D: Output matrix (M x N)
+ * - alpha: Coefficient for matrix A
+ * - beta: Coefficient for matrix B
+ * - gamma: Coefficient for matrix C
+ * - out_coef: Coefficient for accumulation with existing D values
+ */
+__global__ void sum_3_kernel(
+    const Float* __restrict__ A, const Float* __restrict__ B,
+    const Float* __restrict__ C, Float* __restrict__ D,
+    int lda, int ldb, int ldc, int ldd, int M, int N,
+    Float alpha, Float beta, Float gamma, Float out_coef) {
+    
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (row < M && col < N) {
+        // Compute linear combination and accumulate in a single operation
+        D[row + col * ldd] = alpha * A[row + col * lda] +
+                            beta * B[row + col * ldb] +
+                            gamma * C[row + col * ldc] +
+                            out_coef * D[row + col * ldd];
+    }
+}
+
+/**
+ * Host wrapper for computing linear combination of three matrices with accumulation
+ */
+void GPU_sum_3(Float *A, Float *B, Float *C, Float *D,
+               int lda, int ldb, int ldc, int ldd,
+               int M, int N,
+               Float alpha, Float beta, Float gamma,
+               Float out_coef) {
+    
+    dim3 blockSize(TILE_DIM, TILE_DIM);
+    dim3 gridSize((N + TILE_DIM - 1) / TILE_DIM, (M + TILE_DIM - 1) / TILE_DIM);
+    
+    sum_3_kernel<<<gridSize, blockSize>>>(
+        A, B, C, D, lda, ldb, ldc, ldd, M, N,
+        alpha, beta, gamma, out_coef);
+    
+    cudaDeviceSynchronize();
+}
+
+/**
+ * Kernel for matrix addition with accumulation:
+ * C = alpha * A + beta * B + out_coef * C
+ * 
+ * This matches the behavior of cublasGeam but adds accumulation capability
+ * 
+ * Parameters:
+ * - A: First input matrix (M x N)
+ * - B: Second input matrix (M x N)
+ * - C: Output matrix (M x N)
+ * - alpha: Coefficient for matrix A
+ * - beta: Coefficient for matrix B
+ * - out_coef: Coefficient for accumulation with existing C values
+ */
+__global__ void add_kernel(
+    const Float* __restrict__ A, const Float* __restrict__ B, Float* __restrict__ C,
+    int lda, int ldb, int ldc, int M, int N,
+    Float alpha, Float beta, Float out_coef) {
+    
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (row < M && col < N) {
+        C[row + col * ldc] = alpha * A[row + col * lda] +
+                            beta * B[row + col * ldb] +
+                            out_coef * C[row + col * ldc];
+    }
+}
+
+/**
+ * Host wrapper for matrix addition with accumulation
+ */
+void GPU_add_acc(Float *A, Float *B, Float *C,
+    int lda, int ldb, int ldc,
+    int M, int N,
+    Float alpha, Float beta,
+    Float out_coef) {
+    dim3 blockSize(TILE_DIM, TILE_DIM);
+    dim3 gridSize((N + TILE_DIM - 1) / TILE_DIM, (M + TILE_DIM - 1) / TILE_DIM);
+    
+    add_kernel<<<gridSize, blockSize>>>(
+        A, B, C, lda, ldb, ldc, M, N,
+        alpha, beta, out_coef);
+    
+    cudaDeviceSynchronize();
+}
+
 // Host wrapper functions
 
 /**

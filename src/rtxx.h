@@ -28,6 +28,12 @@ void GPU_AtB(Float *A, Float *B, Float *C,
              int YA, int YB, int YC,
              Float alpha, Float beta);
 
+void GPU_add_acc(Float *A, Float *B, Float *C,
+    int lda, int ldb, int ldc,
+    int M, int N,
+    Float alpha, Float beta,
+    Float out_coef = 0.0);
+
 // Fused kernel function declarations
 void GPU_A_mul_B_plus_C_t(Float *A, Float *B, Float *C, Float *D,
                           int lda, int ldb, int ldc, int ldd,
@@ -46,6 +52,12 @@ void GPU_sum_to_2(Float *A, Float *B, Float *C1, Float *C2,
                   int M, int N,
                   Float alpha, Float beta, Float gamma, Float delta,
                   Float out_coef1 = 0.0, Float out_coef2 = 0.0);
+
+void GPU_sum_3(Float *A, Float *B, Float *C, Float *D,
+               int lda, int ldb, int ldc, int ldd,
+               int M, int N,
+               Float alpha, Float beta, Float gamma,
+               Float out_coef = 0.0);
 
 // Global CUBLAS handle
 extern cublasHandle_t handle;

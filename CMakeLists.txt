@@ -49,6 +49,9 @@ target_link_libraries(ata_gpu PUBLIC
     CUDA::cublas
 )
 
+# Set binary output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Add executable target
 add_executable(ata src/ata.cpp)
 target_link_libraries(ata PRIVATE ata_gpu)
